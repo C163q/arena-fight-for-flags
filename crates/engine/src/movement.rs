@@ -2,7 +2,7 @@ use crate::*;
 use serde_json::json;
 use std::collections::BTreeMap;
 
-pub(crate) fn resolve(e: &mut Engine, actions: &mut [TeamActions]) {
+pub(crate) fn resolve(e: &mut Engine, actions: &mut [TeamActions], start: &Snapshot) {
     let original = actions.to_vec();
     let before = e.state.units.clone();
     let n = before.len();
@@ -13,7 +13,11 @@ pub(crate) fn resolve(e: &mut Engine, actions: &mut [TeamActions]) {
             continue;
         };
         let Some(from) = u.position else {
-            reasons[i] = "dead_unit";
+            reasons[i] = if start.units[i].position.is_some() {
+                "killed_before_move"
+            } else {
+                "dead_unit"
+            };
             actions[i / 3][i % 3] = Action::Wait;
             continue;
         };
@@ -91,7 +95,7 @@ pub(crate) fn resolve(e: &mut Engine, actions: &mut [TeamActions]) {
         let Action::Move { direction: raw } = original[i / 3][i % 3] else {
             continue;
         };
-        let target = u.position.map(|p| {
+        let target = start.units[i].position.map(|p| {
             let (dx, dy) = match raw {
                 Direction::Up => (0, -1),
                 Direction::Down => (0, 1),
@@ -109,6 +113,6 @@ pub(crate) fn resolve(e: &mut Engine, actions: &mut [TeamActions]) {
                 _ => None,
             })
             .collect();
-        e.emit("move","move",json!({"unit":u.id,"from":u.position,"target":target,"validation":if matches!(reasons[i],"ok"|"contested"){"ok"}else{reasons[i]},"result":if success[i]{"moved"}else if matches!(reasons[i],"ok"|"contested"){"blocked"}else{"not_executed"},"reason":if !success[i]&&reasons[i]=="ok"{"occupied_or_cycle"}else{reasons[i]},"final_position":e.state.units[i].position,"carrying":u.carrying,"target_flags":flags}));
+        e.emit("move","move",json!({"unit":u.id,"from":start.units[i].position,"target":target,"validation":if matches!(reasons[i],"ok"|"contested"|"killed_before_move"){"ok"}else{reasons[i]},"result":if success[i]{"moved"}else if reasons[i]=="killed_before_move"{"cancelled"}else if matches!(reasons[i],"ok"|"contested"){"blocked"}else{"not_executed"},"reason":if !success[i]&&reasons[i]=="ok"{"occupied_or_cycle"}else{reasons[i]},"final_position":e.state.units[i].position,"carrying":u.carrying,"target_flags":flags}));
     }
 }

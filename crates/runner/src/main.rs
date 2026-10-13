@@ -1,7 +1,19 @@
 mod cli;
 use fff_ai_worker::{TeamHost, initialization};
 use fff_engine::*;
+use fff_replay::{AiInfo, Recorder, Summary};
+use sha2::{Digest, Sha256};
+use std::io::Read;
 fn run() -> Result<(), String> {
+    if std::env::args_os().nth(1).is_some_and(|s| s == "verify") {
+        let args = std::env::args_os().collect::<Vec<_>>();
+        if args.len() != 3 {
+            return Err("usage: fff-runner verify MATCH_DIR".into());
+        }
+        fff_replay::verify_directory(std::path::Path::new(&args[2]))?;
+        println!("{}", serde_json::json!({"verified":true}));
+        return Ok(());
+    }
     let Some(options) = cli::parse()? else {
         println!("{}", cli::USAGE);
         return Ok(());
@@ -15,6 +27,7 @@ fn run() -> Result<(), String> {
         flag_respawn_max_turns: options.flag_max,
     };
     let mut engine = Engine::new(map.clone(), config.clone(), options.seed)?;
+    let map = engine.map().clone();
     let worker = std::env::current_exe()
         .map_err(|e| e.to_string())?
         .parent()
@@ -24,9 +37,28 @@ fn run() -> Result<(), String> {
         return Err("fff-ai-worker not found beside runner; build the full workspace".into());
     }
     let mut hosts = Vec::new();
+    let mut teams = Vec::new();
     for (i, path) in options.ais.iter().enumerate() {
         let library =
             std::fs::canonicalize(path).map_err(|e| format!("{}: {e}", path.display()))?;
+        let mut file = std::fs::File::open(&library).map_err(|e| e.to_string())?;
+        let mut digest = Sha256::new();
+        let mut buffer = [0u8; 16384];
+        loop {
+            let n = file.read(&mut buffer).map_err(|e| e.to_string())?;
+            if n == 0 {
+                break;
+            }
+            digest.update(&buffer[..n]);
+        }
+        teams.push(AiInfo {
+            team_id: i as u32,
+            name: library
+                .file_stem()
+                .map_or_else(|| format!("team{i}"), |s| s.to_string_lossy().into_owned()),
+            library_path: library.to_string_lossy().into_owned(),
+            library_sha256: format!("{:x}", digest.finalize()),
+        });
         hosts.push(TeamHost::new(
             &worker,
             &library,
@@ -40,6 +72,16 @@ fn run() -> Result<(), String> {
             ),
         ));
     }
+    let raw = std::fs::read_to_string(&options.map).map_err(|e| e.to_string())?;
+    let mut recorder = Recorder::create(
+        &options.out,
+        &map,
+        &config,
+        options.seed,
+        engine.snapshot(),
+        teams,
+        &raw,
+    )?;
     let mut failures = vec![0u32; map.players as usize];
     let mut invalid = vec![0u32; map.players as usize];
     while engine.snapshot().outcome.is_none() {
@@ -51,6 +93,7 @@ fn run() -> Result<(), String> {
             }
         }
         let frame = engine.resolve_turn(calls.iter().map(|c| c.actions).collect())?;
+        recorder.write(&frame, &calls)?;
         for event in &frame.events {
             if event
                 .data
@@ -65,7 +108,15 @@ fn run() -> Result<(), String> {
             }
         }
     }
-    let summary = serde_json::json!({"turns":engine.snapshot().turn,"scores":engine.snapshot().scores,"outcome":engine.snapshot().outcome,"ai_failures":failures,"illegal_actions":invalid});
+    let summary = Summary {
+        complete: true,
+        turns: engine.snapshot().turn,
+        scores: engine.snapshot().scores.clone(),
+        outcome: engine.snapshot().outcome.clone(),
+        ai_failures: failures,
+        illegal_actions: invalid,
+    };
+    recorder.finish(&summary)?;
     println!(
         "{}",
         serde_json::to_string(&summary).map_err(|e| e.to_string())?

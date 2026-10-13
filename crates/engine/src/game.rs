@@ -160,7 +160,7 @@ impl Engine {
             }
         }
         shooting::resolve(self, &mut applied);
-        movement::resolve(self, &mut applied);
+        movement::resolve(self, &mut applied, &start);
         flags::pickup_existing(self);
         flags::generate_due(self);
         flags::score(self);

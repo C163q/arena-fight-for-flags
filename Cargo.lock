@@ -121,11 +121,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "fff-replay"
+version = "0.1.0"
+dependencies = [
+ "fff-ai-worker",
+ "fff-engine",
+ "ron",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "fff-runner"
 version = "0.1.0"
 dependencies = [
  "fff-ai-worker",
  "fff-engine",
+ "fff-replay",
  "serde_json",
  "sha2",
 ]

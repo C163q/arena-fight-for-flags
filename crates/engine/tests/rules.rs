@@ -443,3 +443,14 @@ fn home_return_schedule_event_belongs_to_score_phase_and_targets_spawn_phase() {
     assert_eq!(schedule.phase, "score");
     assert_eq!(schedule.data["next_attempt_phase"], "flag_spawn");
 }
+
+#[test]
+fn move_cancelled_by_same_turn_death_is_not_a_submission_error() {
+    let mut e = scene(&[(0, 3, 4, 1), (3, 4, 4, 3)]);
+    let frame = act(&mut e, &[(0, mv(Direction::Up)), (3, shoot(3, 4))]);
+    let event = frame.events.iter().find(|e| e.kind == "move").unwrap();
+    assert_eq!(event.data["validation"], "ok");
+    assert_eq!(event.data["result"], "cancelled");
+    assert_eq!(event.data["from"], serde_json::json!({"x":3,"y":4}));
+    assert_eq!(event.data["target"], serde_json::json!({"x":3,"y":3}));
+}

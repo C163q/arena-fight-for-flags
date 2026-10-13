@@ -50,6 +50,18 @@ void ctf_destroy(void *c){(void)c;}
     assert_eq!(summary["turns"], 2);
     assert_eq!(summary["scores"], serde_json::json!([0, 0]));
     assert_eq!(summary["ai_failures"], serde_json::json!([0, 0]));
+    assert!(dir.join("match/frames/000002.json").is_file());
+    assert!(dir.join("match/frames/000002.txt").is_file());
+    let verified = Command::new(env!("CARGO_BIN_EXE_fff-runner"))
+        .arg("verify")
+        .arg(dir.join("match"))
+        .output()
+        .unwrap();
+    assert!(
+        verified.status.success(),
+        "{}",
+        String::from_utf8_lossy(&verified.stderr)
+    );
     assert!(
         !Command::new(env!("CARGO_BIN_EXE_fff-runner"))
             .args(["--turns", "1"])
