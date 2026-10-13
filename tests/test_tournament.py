@@ -116,5 +116,81 @@ class PlanTests(PlanFixture):
                     self.fail('second writer entered')
 
 
+try:
+    from tournament_lib.execution import run, collect
+except ImportError:
+    run = collect = None
+
+
+class ExecutionTests(PlanFixture):
+    def setUp(self):
+        super().setUp()
+        fixture = Path(__file__).with_name('fixtures')/'tournament_runner.py'
+        # Keep the portable Python fixture executable using this interpreter.
+        (self.base/'fff-runner').write_text('#!'+sys.executable+'\n'+fixture.read_text().split('\n',1)[1])
+        (self.base/'fff-runner').chmod(0o755)
+
+    def start(self, **kwargs):
+        self.assertIsNotNone(run, 'tournament execution is missing')
+        return run(self.root, **kwargs)
+
+    def test_completed_records_are_reused_without_checkpoint(self):
+        plan=self.make(repeats=1)
+        result=self.start(max_matches=1)
+        self.assertEqual(result['completed'],1)
+        attempt=self.root/'matches'/plan['matches'][0]['id']/'attempt-000'
+        before=(attempt/'match/summary.json').stat().st_mtime_ns
+        (self.root/'checkpoint.json').unlink()
+        meta=json.loads((attempt/'attempt.json').read_text())
+        meta['state']='running'  # Simulate crash after recorder.finish, before checkpoint.
+        atomic_json(attempt/'attempt.json',meta)
+        result=self.start()
+        self.assertEqual(result['completed'],2)
+        self.assertEqual((attempt/'match/summary.json').stat().st_mtime_ns,before)
+        self.assertEqual(len(list(attempt.parent.glob('attempt-*'))),1)
+        self.assertEqual(len(collect(self.root,plan)),2)
+
+    def test_partial_attempt_is_preserved_and_retried(self):
+        plan=self.make(repeats=1)
+        match=plan['matches'][0]
+        attempt=self.root/'matches'/match['id']/'attempt-000'
+        (attempt/'match').mkdir(parents=True)
+        (attempt/'match/partial').write_text('keep me')
+        atomic_json(attempt/'attempt.json',{'match_id':match['id'],'state':'running'})
+        self.start(max_matches=1)
+        self.assertEqual((attempt/'match/partial').read_text(),'keep me')
+        self.assertTrue((attempt.parent/'attempt-001/match/summary.json').is_file())
+        self.assertEqual(json.loads((attempt/'attempt.json').read_text())['state'],'interrupted')
+
+    def test_invalid_completed_record_stops_instead_of_replaying(self):
+        plan=self.make(repeats=1)
+        self.start(max_matches=1)
+        attempt=self.root/'matches'/plan['matches'][0]['id']/'attempt-000'
+        (attempt/'match/bad-verify').touch()
+        with self.assertRaisesRegex(ValueError,'verif'):
+            self.start()
+        self.assertEqual(len(list(attempt.parent.glob('attempt-*'))),1)
+
+    def test_changed_identity_or_seed_cannot_be_reused(self):
+        plan=self.make(repeats=1)
+        self.start(max_matches=1)
+        path=self.root/'matches'/plan['matches'][0]['id']/'attempt-000/match/manifest.json'
+        manifest=json.loads(path.read_text())
+        manifest['teams'][0]['ai_seed']+=1
+        path.write_text(json.dumps(manifest))
+        with self.assertRaisesRegex(ValueError,'input mismatch'):
+            self.start()
+
+    def test_runner_error_is_not_a_loss_or_automatic_retry(self):
+        self.make(repeats=1)
+        (self.base/'control').touch()
+        with self.assertRaisesRegex(ValueError,'runner'):
+            self.start()
+        (self.base/'control').unlink()
+        with self.assertRaisesRegex(ValueError,'infrastructure'):
+            self.start()
+        self.assertEqual(len(list((self.root/'matches').glob('*/attempt-*'))),1)
+
+
 if __name__ == '__main__':
     unittest.main()
