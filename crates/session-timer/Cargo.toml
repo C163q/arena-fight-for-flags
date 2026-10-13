@@ -6,3 +6,11 @@ license.workspace = true
 
 [dependencies]
 libc.workspace = true
+
+[[bin]]
+name = "fff-timer"
+path = "src/bin/timer.rs"
+
+[[bin]]
+name = "fff-timer-query"
+path = "src/bin/query.rs"
