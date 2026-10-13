@@ -2,8 +2,10 @@
 from collections import Counter
 from datetime import datetime, timezone
 import json
+import os
 from pathlib import Path
 import subprocess
+import sys
 import time
 from .storage import atomic_json, load_plan, locked, read_json, sha
 
@@ -12,10 +14,12 @@ def now():
     return datetime.now(timezone.utc).isoformat()
 
 
-def command_to_logs(command, directory, prefix):
+def command_to_logs(command, directory, prefix, lock_fd=None):
     """Separate runner session lets interruption stop it without signaling our shell."""
     with (directory/f'{prefix}.stdout.log').open('wb') as stdout, (directory/f'{prefix}.stderr.log').open('wb') as stderr:
-        process = subprocess.Popen(command, stdout=stdout, stderr=stderr, start_new_session=True)
+        guarded = [sys.executable, str(Path(__file__).with_name('launch.py')), str(os.getpid()), *command]
+        process = subprocess.Popen(guarded, stdout=stdout, stderr=stderr, start_new_session=True,
+                                   pass_fds=() if lock_fd is None else (lock_fd,))
         try:
             return process.wait()
         except BaseException:
@@ -28,7 +32,7 @@ def command_to_logs(command, directory, prefix):
             raise
 
 
-def validate_match(root, plan, match, attempt):
+def validate_match(root, plan, match, attempt, lock_fd=None):
     directory = attempt/'match'
     manifest = read_json(directory/'manifest.json')
     group = next(g for g in plan['groups'] if g['id'] == match['group'])
@@ -44,7 +48,7 @@ def validate_match(root, plan, match, attempt):
                 raise ValueError('team identity/library/AI seed')
     except (KeyError, TypeError, ValueError, OSError) as error:
         raise ValueError(f'{directory}: input mismatch: {error}') from error
-    if command_to_logs([plan['runner']['path'],'verify',str(directory)],attempt,'verify') != 0:
+    if command_to_logs([plan['runner']['path'],'verify',str(directory)],attempt,'verify',lock_fd) != 0:
         raise ValueError(f'{directory}: replay verification failed; see {attempt}/verify.stderr.log')
     summary = read_json(directory/'summary.json')
     if summary.get('complete') is not True or any(len(summary.get(k,[])) != group['players'] for k in ('scores','ai_failures','illegal_actions')):
@@ -65,7 +69,7 @@ def validate_match(root, plan, match, attempt):
             'wall_seconds':meta.get('wall_seconds')}
 
 
-def collect(root, plan):
+def collect(root, plan, lock_fd=None):
     """Caller holds the output lock. Checkpoints are hints, never result authority."""
     root, rows = Path(root).resolve(), []
     for match in plan['matches']:
@@ -88,7 +92,7 @@ def collect(root, plan):
                 if not meta_path.exists():
                     atomic_json(meta_path,meta)
                 try:
-                    row = validate_match(root,plan,match,attempt)
+                    row = validate_match(root,plan,match,attempt,lock_fd)
                 except ValueError as error:
                     meta.update(state='invalid',error=str(error))
                     atomic_json(meta_path,meta)
@@ -115,9 +119,9 @@ def run(root, max_matches=None):
     root = Path(root).resolve()
     if max_matches is not None and (type(max_matches) is not int or max_matches < 1):
         raise ValueError('max-matches must be a positive integer')
-    with locked(root):
+    with locked(root) as lock_fd:
         plan = load_plan(root)
-        rows = collect(root,plan)
+        rows = collect(root,plan,lock_fd)
         completed = {row['match_id'] for row in rows}
         checkpoint(root,plan,rows)
         new_count = 0
@@ -144,12 +148,12 @@ def run(root, max_matches=None):
                 command += ['--ai',str(root/ais[aid]['path']),'--ai-seed',str(seed)]
             started = time.monotonic()
             try:
-                code = command_to_logs(command,attempt,'runner')
+                code = command_to_logs(command,attempt,'runner',lock_fd)
                 meta['wall_seconds'] = time.monotonic()-started
                 atomic_json(attempt/'attempt.json',meta)
                 if code:
                     raise ValueError(f'runner exited {code}; see {attempt}/runner.stderr.log')
-                row = validate_match(root,plan,match,attempt)
+                row = validate_match(root,plan,match,attempt,lock_fd)
                 output = read_json(attempt/'runner.stdout.log')
                 if output != row['summary']:
                     raise ValueError('runner stdout differs from recorded summary')

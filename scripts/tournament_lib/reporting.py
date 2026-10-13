@@ -1,9 +1,11 @@
 """Per-lineup statistics using only complete, verified rotation blocks."""
 from collections import Counter, defaultdict
 import csv
+import html
 from datetime import datetime, timezone
 import io
 import random
+import re
 from .storage import atomic_json, atomic_text, sha
 
 BOOTSTRAP_SEED = 0xFFF20261013
@@ -119,7 +121,8 @@ def build_results(plan, rows):
 
 
 def md(value):
-    return str(value).replace('\\','\\\\').replace('|','\\|').replace('\r',' ').replace('\n',' ').replace('<','&lt;').replace('>','&gt;')
+    text = html.escape(str(value), quote=False).replace('\r',' ').replace('\n',' ')
+    return re.sub(r'([\\`*_{}\[\]()#+.!|~\-])', r'\\\1', text)
 
 
 def write_reports(root, plan, rows):

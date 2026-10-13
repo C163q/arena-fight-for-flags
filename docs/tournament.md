@@ -85,7 +85,7 @@ python3 scripts/tournament.py run runs/tournament-new
 python3 scripts/tournament.py report runs/tournament-new
 ```
 
-Ctrl+C/SIGTERM 中断时终止当前 runner，保留半场；下次为同一计划场次新建 attempt，使用原种子重打。已经完成但检查点未写完的比赛，验证后直接采用。`checkpoint.json` 只是进度辅助，原始回放才是结果依据。进程被 SIGKILL 时依赖既有 worker 父进程清理机制，恢复时扫描原始目录。
+Ctrl+C/SIGTERM 中断时终止当前 runner，保留半场；下次为同一计划场次新建 attempt，使用原种子重打。已经完成但检查点未写完的比赛，验证后直接采用。`checkpoint.json` 只是进度辅助，原始回放才是结果依据。独立启动助手在 exec 前设置 Linux 父进程死亡信号并检查启动竞态：测评机被 SIGKILL 后先终止 runner，再触发既有 worker 父进程清理；恢复时扫描原始目录。
 
 只有全部场次完成并通过 `fff-runner verify` 的重复块进入正式排名；部分块保留逐场结果但不参与排名，报告明确列出进度。`--max-matches` 不会把未完整块冒充为均衡结果。
 
@@ -93,7 +93,7 @@ AI 超时/崩溃和非法动作按游戏规则计入比赛，并分别统计。r
 
 计划复制地图和 AI 库到 `inputs/`，记录 SHA-256；原库随后变化不会影响冻结副本。runner/worker 使用生成计划时的绝对路径并锁定指纹，执行每场前重新检查，续跑期间不要替换它们或移动输出目录。主库以外的动态依赖、外部数据与系统环境未被完整冻结。独立进程隔离不等于恶意代码沙箱。
 
-输出目录通过 Linux 文件锁排除同时执行/报告；另一进程正在运行时，`report` 会提示锁冲突。每场结束原子更新检查点；正常分段停止或全部完成时生成报告。中断后可执行 `report` 查看已完成块。
+输出目录通过 Linux 文件锁排除同时执行/报告，锁描述符继承到 runner/验证进程，直到子进程退出才释放；另一进程或清理中的子进程仍持锁时，`report`/`run` 会提示锁冲突，可待退出后重试。每场结束原子更新检查点；正常分段停止或全部完成时生成报告。中断后可执行 `report` 查看已完成块。
 
 ## 排名口径
 
@@ -112,6 +112,7 @@ AI 超时/崩溃和非法动作按游戏规则计入比赛，并分别统计。r
 ```sh
 python3 -m unittest discover -s tests -p 'test_*.py' -v
 python3 tests/tournament_integration.py --out runs/tournament-check-new
+python3 tests/tournament_parent_cleanup.py --out runs/tournament-kill-check-new
 ```
 
 实战验收使用正式 release runner，覆盖 2–8 队快速模式共 35 场、8 队正式模式 56 场，验证真实中断与恢复、复用已完成场次、记录损坏/输入变化拒绝和每场回放。验收同库自战证明工具流程，不用于断言 AI 强度排名。

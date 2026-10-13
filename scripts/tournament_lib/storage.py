@@ -58,10 +58,9 @@ def locked(root):
             fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as error:
             raise ValueError(f'{root}: tournament is locked by another process') from error
-        try:
-            yield
-        finally:
-            fcntl.flock(stream, fcntl.LOCK_UN)
+        # Close our descriptor on exit, rather than explicitly unlocking the
+        # shared open-file description: an inherited child may still be alive.
+        yield stream.fileno()
 
 
 def identifier(value):

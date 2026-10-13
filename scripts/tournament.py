@@ -10,9 +10,9 @@ from tournament_lib.storage import create_plan, load_plan, locked
 
 
 def report(root):
-    with locked(root):
+    with locked(root) as lock_fd:
         plan = load_plan(root)
-        return write_reports(root,plan,collect(root,plan))
+        return write_reports(root,plan,collect(root,plan,lock_fd))
 
 
 def main():

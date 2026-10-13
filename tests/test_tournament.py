@@ -181,6 +181,54 @@ class ExecutionTests(PlanFixture):
         with self.assertRaisesRegex(ValueError,'input mismatch'):
             self.start()
 
+    def test_sigkill_cannot_leave_runner_live_with_unlocked_output(self):
+        import os
+        import signal
+        import subprocess
+        import time
+        runner=self.base/'fff-runner'
+        text=runner.read_text().replace('root.mkdir()', "root.mkdir()\nimport os, time\nif Path(__file__).with_name('hold').exists():\n    (root/'runner.pid').write_text(str(os.getpid()))\n    time.sleep(30)")
+        runner.write_text(text)
+        self.make(repeats=1)
+        (self.base/'hold').touch()
+        cli=Path(__file__).resolve().parents[1]/'scripts/tournament.py'
+        process=subprocess.Popen([sys.executable,str(cli),'run',str(self.root),'--max-matches','1'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        pid=None
+        def live(child):
+            path=Path(f'/proc/{child}/stat')
+            try:
+                return path.read_text().rsplit(')',1)[1].split()[0] not in ('Z','X')
+            except FileNotFoundError:
+                return False
+        try:
+            deadline=time.monotonic()+5
+            while time.monotonic()<deadline:
+                files=list((self.root/'matches').glob('*/attempt-000/match/runner.pid'))
+                if files:
+                    pid=int(files[0].read_text())
+                    break
+                time.sleep(.005)
+            self.assertIsNotNone(pid,'runner did not start')
+            process.kill()
+            process.wait()
+            try:
+                with locked(self.root):
+                    self.assertFalse(live(pid),'orphan runner is still live while output is unlocked')
+            except ValueError as error:
+                self.assertIn('locked',str(error))
+            deadline=time.monotonic()+3
+            while live(pid) and time.monotonic()<deadline:
+                time.sleep(.005)
+            self.assertFalse(live(pid),'runner did not stop after tournament SIGKILL')
+            (self.base/'hold').unlink()
+            self.assertEqual(self.start(max_matches=1)['completed'],1)
+        finally:
+            if process.poll() is None:
+                process.kill()
+                process.wait()
+            if pid is not None and live(pid):
+                os.kill(pid,signal.SIGKILL)
+
     def test_runner_error_is_not_a_loss_or_automatic_retry(self):
         self.make(repeats=1)
         (self.base/'control').touch()
@@ -269,6 +317,19 @@ class ReportingTests(PlanFixture):
         a=next(x for x in result['groups'][0]['standings'] if x['id']=='a')
         self.assertEqual(a['rank_score'],0.6)
         self.assertEqual(a['rank_score_ci95'],[0.2,1.0])
+
+    def test_display_names_remain_plain_text_in_markdown(self):
+        cfg=copy.deepcopy(self.config)
+        cfg['ais'][0]['name']='![AI](https://example.org/pixel) **bold** `code` &lt;'
+        plan=self.make(cfg,repeats=1)
+        self.assertIsNotNone(write_reports)
+        write_reports(self.root,plan,self.results(plan,[[20,20]]*2))
+        text=(self.root/'report.md').read_text()
+        self.assertNotIn('![AI](',text)
+        self.assertNotIn('**bold**',text)
+        self.assertNotIn('`code`',text)
+        self.assertIn('&amp;lt;',text)
+        self.assertIn('\\!\\[AI\\]\\(https://example\\.org/pixel\\)',text)
 
     def test_intervals_resample_blocks_and_exports_escape_names(self):
         plan=self.make(repeats=5)
