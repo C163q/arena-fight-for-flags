@@ -4,6 +4,7 @@
     format_version: 1,
     id: "arena_2p",
     players: 2,
+    match_limits: (target_score: 5, max_turns: 500),
     width: 25,
     height: 25,
     terrain: [

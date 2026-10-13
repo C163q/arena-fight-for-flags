@@ -1,0 +1,10 @@
+[package]
+name = "fff-engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+ron.workspace = true

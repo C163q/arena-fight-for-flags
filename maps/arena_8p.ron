@@ -4,6 +4,7 @@
     format_version: 1,
     id: "arena_8p",
     players: 8,
+    match_limits: (target_score: 12, max_turns: 1200),
     width: 41,
     height: 41,
     terrain: [
