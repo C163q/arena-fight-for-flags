@@ -1,4 +1,11 @@
 use std::{path::Path, process::Command};
+fn map_with_limit(path: &Path, turns: u32) -> String {
+    let map = fff_engine::MapDefinition::load(path).unwrap();
+    std::fs::read_to_string(path).unwrap().replace(
+        &format!("max_turns: {}", map.match_limits.max_turns),
+        &format!("max_turns: {turns}"),
+    )
+}
 #[test]
 fn match_uses_ron_limits_and_rejects_unknown_overrides_or_wrong_team_count() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
@@ -26,9 +33,7 @@ void ctf_destroy(void *c){(void)c;}
             .unwrap()
             .success()
     );
-    let map = std::fs::read_to_string(root.join("maps/arena_2p.ron"))
-        .unwrap()
-        .replace("max_turns: 500", "max_turns: 2");
+    let map = map_with_limit(&root.join("maps/arena_2p.ron"), 2);
     let path = dir.join("map.ron");
     std::fs::write(&path, map).unwrap();
     let output = Command::new(env!("CARGO_BIN_EXE_fff-runner"))
@@ -82,9 +87,7 @@ void ctf_destroy(void *c){(void)c;}
             .unwrap()
             .success()
     );
-    let map8 = std::fs::read_to_string(root.join("maps/arena_8p.ron"))
-        .unwrap()
-        .replace("max_turns: 1200", "max_turns: 2");
+    let map8 = map_with_limit(&root.join("maps/arena_8p.ron"), 2);
     let path8 = dir.join("eight.ron");
     std::fs::write(&path8, map8).unwrap();
     let mut command = Command::new(env!("CARGO_BIN_EXE_fff-runner"));
@@ -185,9 +188,7 @@ void ctf_destroy(void *c){(void)c;}
         0
     );
     // A user interrupt or forced parent exit must not strand paused workers.
-    let long_ron = std::fs::read_to_string(root.join("maps/arena_2p.ron"))
-        .unwrap()
-        .replace("max_turns: 500", "max_turns: 1000000");
+    let long_ron = map_with_limit(&root.join("maps/arena_2p.ron"), 1000000);
     let long_map = dir.join("long.ron");
     std::fs::write(&long_map, long_ron).unwrap();
     let mut parent = Command::new(env!("CARGO_BIN_EXE_fff-runner"))

@@ -5,10 +5,9 @@ use fff_replay::*;
 use std::path::{Path, PathBuf};
 fn record(name: &str, complete: bool) -> PathBuf {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-    let raw = std::fs::read_to_string(root.join("maps/arena_2p.ron"))
-        .unwrap()
-        .replace("max_turns: 500", "max_turns: 3");
-    let map: MapDefinition = ron::from_str(&raw).unwrap();
+    let mut map = MapDefinition::load(&root.join("maps/arena_2p.ron")).unwrap();
+    map.match_limits.max_turns = 3;
+    let raw = ron::to_string(&map).unwrap();
     let config = Config::default();
     let mut engine = Engine::new(map.clone(), config.clone(), 42).unwrap();
     let path = std::env::temp_dir().join(format!("fff-replay-{}-{name}", std::process::id()));

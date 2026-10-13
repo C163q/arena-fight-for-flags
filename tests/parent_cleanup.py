@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import signal
+import re
 import subprocess
 import tempfile
 import time
@@ -41,7 +42,9 @@ void ctf_destroy(void *c){(void)c;}
 ''')
         subprocess.run(["cc", "-shared", "-fPIC", "-O0", "-I", "include", str(source), "-o", str(library)], check=True)
         game_map = root / "map.ron"
-        game_map.write_text(Path("maps/arena_2p.ron").read_text().replace("max_turns: 500", "max_turns: 1000000"))
+        source_map, changed = re.subn(r"(max_turns\s*:\s*)\d+", r"\g<1>1000000", Path("maps/arena_2p.ron").read_text())
+        assert changed == 1, "expected one max_turns field"
+        game_map.write_text(source_map)
         for mode in ("paused", "active"):
             pids_file = root / f"{mode}.pids"
             directory = root / mode

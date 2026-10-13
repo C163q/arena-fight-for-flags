@@ -65,6 +65,6 @@
 
 按改动范围执行 `cargo fmt --check`、`cargo test --workspace`、`cargo clippy --workspace --all-targets -- -D warnings`。导出器运行 `python3 -m unittest discover -s viewer -p 'test_*.py' -v`；真实对战与浏览器命令见 README。进程组测试需要系统允许停止/恢复/终止子进程。
 
-涉及 worker 时，验证无限循环、崩溃、坏 ABI、超时整队等待及后续回合恢复；涉及规则时，验证 [路线图](docs/roadmap.md) 中对应案例；涉及地图时，验证 2–8 人资产可解析、边界全封、出生区与旗点可达、人数匹配；涉及回放时，验证文本与结构化状态一致、离线播放以及格式错误提示。
+涉及 worker 时，验证无限循环、崩溃、坏 ABI、超时整队等待及后续回合恢复；涉及规则时，验证 [路线图](docs/roadmap.md) 中对应案例；涉及地图时，验证 2–8 人资产可解析、边界全封、出生区与旗点可达、人数匹配；涉及回放时，验证文本与结构化状态一致、离线播放以及格式错误提示。默认地图 v2 的生成参数在 `scripts/generate_maps.py`，修改后运行 `python3 scripts/generate_maps.py --check`；数值调整通过 `scripts/calibrate_maps.py` 正式自战并保留报告，不能将到时截尾当作达标耗时。
 
 交付说明应包含实际修改、实际执行的检查及尚存限制。不得将设计目标描述为已实现功能，不自动提交、推送或发布未经本次任务要求的成果。

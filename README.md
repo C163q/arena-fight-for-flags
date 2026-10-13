@@ -54,13 +54,15 @@ AI 可见全图、所有棋子位置/血量/携旗、当前旗帜、比分和复
 
 | 地图人数 | 尺寸 | 目标分 | 最大回合 |
 | --- | --- | --- | --- |
-| 2 | 25×25 | 5 | 500 |
-| 3–4 | 29×29 | 6 | 650 |
-| 5 | 33×33 | 8 | 800 |
-| 6–7 | 37×37 | 10 | 1000 |
-| 8 | 41×41 | 12 | 1200 |
+| 2 | 25×25 | 20 | 400 |
+| 3 | 29×29 | 20 | 500 |
+| 4 | 31×31 | 20 | 600 |
+| 5 | 33×33 | 20 | 700 |
+| 6 | 35×35 | 20 | 800 |
+| 7 | 37×37 | 20 | 900 |
+| 8 | 41×41 | 20 | 1000 |
 
-地图是候选测试场，部分出生位到旗点的距离不同；用于正式公平排名前需要继续平衡。独立进程提供超时/崩溃隔离，不是执行恶意本地库的完整安全沙箱。
+地图已调整为菱形出生环与稀疏障碍，所有出生位到最近旗点等距；仍有实战位置偏好，比较 AI 时轮换位置并跑多个种子。详见 [地图标定报告](docs/map-balance-2026-10-13.md) 和 [地图概览](docs/assets/maps-v2.svg)。独立进程提供超时/崩溃隔离，不是执行恶意本地库的完整安全沙箱。
 
 ## 文档与检查
 
@@ -81,6 +83,8 @@ cargo fmt --check
 cargo test --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 python3 -m unittest discover -s viewer -p 'test_*.py' -v
+python3 -m unittest discover -s tests -p 'test_*.py' -v
+python3 scripts/generate_maps.py --check
 python3 tests/integration.py --out runs/smoke-new
 python3 tests/browser.py runs/smoke-new/2p/replay.html
 python3 tests/viewer_usability.py runs/smoke-new/8p/replay.html runs/smoke-new/8p/replay.json

@@ -6,25 +6,58 @@ fn fixture() -> MapDefinition {
 }
 #[test]
 fn all_seven_maps_load_with_their_own_match_limits() {
-    for (players, score, turns) in [
-        (2, 5, 500),
-        (3, 6, 650),
-        (4, 6, 650),
-        (5, 8, 800),
-        (6, 10, 1000),
-        (7, 10, 1000),
-        (8, 12, 1200),
-    ] {
+    let mut previous_limit = 0;
+    for players in 2..=8 {
         let path =
             Path::new(env!("CARGO_MANIFEST_DIR")).join(format!("../../maps/arena_{players}p.ron"));
         let map = MapDefinition::load(&path).unwrap();
-        assert_eq!(
-            (
-                map.players,
-                map.match_limits.target_score,
-                map.match_limits.max_turns
-            ),
-            (players, score, turns)
+        assert_eq!(map.players, players);
+        assert_eq!(map.match_limits.target_score, 20);
+        assert!(map.match_limits.max_turns > previous_limit);
+        previous_limit = map.match_limits.max_turns;
+    }
+}
+#[test]
+fn default_maps_do_not_give_a_large_head_start_to_the_nearest_flag() {
+    use std::collections::{HashSet, VecDeque};
+    for players in 2..=8 {
+        let path =
+            Path::new(env!("CARGO_MANIFEST_DIR")).join(format!("../../maps/arena_{players}p.ron"));
+        let map = MapDefinition::load(&path).unwrap();
+        let nearest: Vec<_> = map
+            .spawn_regions
+            .iter()
+            .map(|home| {
+                let mut queue = VecDeque::new();
+                let mut seen = HashSet::new();
+                for y in home.y..home.y + 3 {
+                    for x in home.x..home.x + 3 {
+                        let p = fff_engine::Point::new(x as i32, y as i32);
+                        queue.push_back((p, 0));
+                        seen.insert((p.x, p.y));
+                    }
+                }
+                while let Some((p, distance)) = queue.pop_front() {
+                    if map
+                        .flag_points
+                        .iter()
+                        .any(|f| f.x as i32 == p.x && f.y as i32 == p.y)
+                    {
+                        return distance;
+                    }
+                    for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+                        let next = fff_engine::Point::new(p.x + dx, p.y + dy);
+                        if map.is_walkable(next) && seen.insert((next.x, next.y)) {
+                            queue.push_back((next, distance + 1));
+                        }
+                    }
+                }
+                panic!("unreachable flags");
+            })
+            .collect();
+        assert!(
+            nearest.iter().max().unwrap() - nearest.iter().min().unwrap() <= 1,
+            "{players}p nearest-flag head start: {nearest:?}"
         );
     }
 }
