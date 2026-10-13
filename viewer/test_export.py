@@ -3,6 +3,8 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+import subprocess
+import sys
 import export
 
 class ExportTests(unittest.TestCase):
@@ -65,6 +67,31 @@ class ExportTests(unittest.TestCase):
         (self.root / "frames/000001.json").unlink()
         with self.assertRaisesRegex(ValueError, "000001"):
             export.load_replay(self.root)
+    def test_single_data_file_export_preserves_states_and_large_metadata(self):
+        output = Path(self.temp.name) / "match.replay.json"
+        result = subprocess.run([sys.executable, str(Path(export.__file__)), str(self.root),
+                                 "--format", "json", "--out", str(output)], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        bundle = json.loads(output.read_text())
+        self.assertEqual(bundle["bundle_format"], "fff-replay")
+        self.assertEqual(bundle["bundle_version"], 1)
+        self.assertEqual(bundle["manifest"]["seed"], "18446744073709551615")
+        self.assertEqual(bundle["initial"]["rng_state"], "18446744073709551615")
+        self.assertEqual(bundle["records"][0]["frame"]["end"]["outcome"]["winners"], [0, 1])
+        self.assertEqual(bundle["map"]["players"], 2)
+    def test_default_cli_exports_shareable_html_and_single_data_file(self):
+        result = subprocess.run([sys.executable, str(Path(export.__file__)), str(self.root)],
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue((self.root / "replay.html").is_file())
+        self.assertEqual(json.loads((self.root / "replay.json").read_text())["records"][0]["frame"]["turn"], 1)
+    def test_both_outputs_must_not_collide(self):
+        output = Path(self.temp.name) / "chosen.json"
+        output.write_text("preserve me")
+        result = subprocess.run([sys.executable, str(Path(export.__file__)), str(self.root), "--out", str(output)],
+                                capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(output.read_text(), "preserve me")
     def test_path_escape_and_duplicate_unit_positions_are_rejected(self):
         (self.root / "map.json").unlink()
         outside = Path(self.temp.name) / "outside.json"

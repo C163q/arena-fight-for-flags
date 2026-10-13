@@ -21,7 +21,7 @@ AI 作者 ──编译──> team_b.so ──加载──> worker B ─┤
                                                             │
                                              ASCII 给 LLM / JSON 帧
                                                             │
-                                              viewer 导出器 -> HTML
+                                             viewer 导出器 -> HTML / JSON 包
 ```
 
 图中展示两个 worker；多队比赛为每支队伍创建独立 worker，扩展到最多八个。队伍数量与队伍 ID 是运行时数据。
@@ -40,7 +40,7 @@ Cargo workspace 与独立 Python 导出器：
 | `crates/replay/` | 结构化记录、ASCII 渲染、读取与验证 | 依赖已版本化状态格式 |
 | `bots/baseline/` | 中等强度 AI 动态库 | 只依赖公开 AI 接口 |
 | `bots/wait/`、`bots/greedy/`、`bots/test-fixture/` | 等待、追旗与故障注入参考库 | 使用同一公开接口 |
-| `viewer/` | Python 导出器与原生 HTML/JS 播放模板 | 只消费回放格式，不依赖 AI 库 |
+| `viewer/` | Python 导出器与通用 HTML/CSS/JS 播放器；内嵌 HTML 和拖放 JSON 共用代码 | 只消费回放格式，不依赖 AI 库 |
 | `maps/` | 固定地图、合法性检查输入 | 数据资产 |
 | `docs/` | 本仓库设计、规则、接口与使用说明 | 文档 |
 

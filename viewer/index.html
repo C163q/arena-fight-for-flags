@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fight for Flags · 回放</title>
+<link rel="stylesheet" href="player.css">
+</head>
+<body>
+<header>
+  <div><h1>Fight for Flags <span class="muted">/ 回放</span></h1><p id="meta">离线播放器 · 数据只在本机处理</p></div>
+  <div class="file-tools"><span id="loadedFile" class="muted"></span><label class="file-button">打开回放<input id="file" type="file" accept=".json,application/json"></label></div>
+</header>
+<div id="loadError" role="alert"></div>
+<section id="empty">
+  <div class="empty-card"><span class="empty-icon">⚑</span><h2>把回放拖到这里</h2><p>拖入单个 replay.json，或点击右上角“打开回放”。</p><p class="export-help">从比赛目录生成数据：<code>python3 viewer/export.py runs/my-match --format json</code></p><p class="muted">无需服务器或网络。此页面可反复载入不同比赛。</p></div>
+</section>
+<div id="workspace" class="layout" hidden>
+  <main id="arena" class="panel">
+    <div class="topline"><span id="turnLabel"></span><span id="result" class="muted"></span></div>
+    <div class="controls">
+      <button id="prev" aria-label="上一回合">←</button><button id="play">播放</button><button id="next" aria-label="下一回合">→</button>
+      <input id="turn" type="range" min="0" value="0" aria-label="回合滑块"><input id="jump" type="number" min="0" value="0" aria-label="指定回合">
+      <select id="speed" aria-label="播放速度"><option value="1">1 回合/秒</option><option value="2" selected>2 回合/秒</option><option value="4">4 回合/秒</option><option value="8">8 回合/秒</option></select>
+      <select id="phase" aria-label="局面阶段"><option value="end">回合结束</option><option value="start">回合开始</option></select>
+    </div>
+    <div class="board-toolbar">
+      <div class="zoom-tools"><button id="zoom-out" aria-label="缩小棋盘">−</button><span id="zoomLabel">100%</span><button id="zoom-in" aria-label="放大棋盘">＋</button><button id="fit">适配</button><button id="fullscreen">全屏</button></div>
+      <label class="muted"><input id="shots" type="checkbox" checked>射击路径</label>
+    </div>
+    <div id="boardViewport"><svg id="board" role="img" aria-label="夺旗棋盘"></svg><span class="board-hint">滚轮缩放 · 拖动平移</span></div>
+    <div class="below muted"><span id="selection">点击棋子查看状态 · ⚑ 携旗 · 受伤显示三格血条</span><span id="frameNote"></span></div>
+    <p id="warning" class="muted"></p>
+  </main>
+  <aside class="sidebar">
+    <section class="panel score-panel"><div class="section-title">队伍与比分 <span id="scoreGoal"></span></div><div id="scores"></div></section>
+    <section class="panel detail-panel">
+      <div class="tabs" role="tablist" aria-label="回放明细">
+        <button id="tab-events" role="tab" aria-selected="true" aria-controls="events" data-tab="events">事件</button>
+        <button id="tab-units" role="tab" aria-selected="false" aria-controls="units" data-tab="units">棋子</button>
+        <button id="tab-calls" role="tab" aria-selected="false" aria-controls="calls" data-tab="calls">AI</button>
+      </div>
+      <div id="events" role="tabpanel" aria-labelledby="tab-events" class="detail-scroll"></div>
+      <div id="units" role="tabpanel" aria-labelledby="tab-units" class="detail-scroll" hidden></div>
+      <div id="calls" role="tabpanel" aria-labelledby="tab-calls" class="detail-scroll" hidden></div>
+    </section>
+  </aside>
+</div>
+<div id="dropOverlay" hidden>松开以载入回放</div>
+<script id="replay-data" type="application/json">null</script>
+<script src="player.js"></script>
+</body>
+</html>

@@ -158,6 +158,33 @@ fn walls_block_even_when_segment_only_touches_corner() {
     assert!(f.events.iter().any(|e| e.data["result"] == "blocked"));
 }
 #[test]
+fn diagonal_corner_blocks_both_directions_with_one_or_two_walls() {
+    // User example translated by (4, 3) to stay inside the sealed map.
+    for walls in [0, 1, 2] {
+        let mut e = scene(&[(0, 4, 4, 3), (3, 5, 3, 3)]);
+        let mut m = e.map().clone();
+        if walls >= 1 {
+            m.terrain[3].replace_range(4..5, "#");
+        }
+        if walls == 2 {
+            m.terrain[4].replace_range(5..6, "#");
+        }
+        e = Engine::from_snapshot(m, e.config().clone(), e.snapshot().clone()).unwrap();
+        let f = act(&mut e, &[(0, shoot(5, 3)), (3, shoot(4, 4))]);
+        let expected_hp = if walls == 0 { 2 } else { 3 };
+        assert_eq!(f.end.units[0].hp, expected_hp, "walls={walls}");
+        assert_eq!(f.end.units[3].hp, expected_hp, "walls={walls}");
+        let result = if walls == 0 { "hit" } else { "blocked" };
+        assert_eq!(
+            f.events
+                .iter()
+                .filter(|e| e.data["result"] == result)
+                .count(),
+            2
+        );
+    }
+}
+#[test]
 fn shots_are_simultaneous_and_dead_mover_is_cancelled() {
     let mut e = scene(&[(0, 3, 4, 1), (3, 4, 4, 1)]);
     let f = act(&mut e, &[(0, shoot(4, 4)), (3, shoot(3, 4))]);

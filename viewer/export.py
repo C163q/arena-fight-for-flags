@@ -95,20 +95,37 @@ def load_replay(directory):
     if summary is not None and (summary.get("complete") is not True or summary.get("turns") != last or summary.get("scores") != (records[-1]["frame"]["end"]["scores"] if records else initial["scores"])):
         raise ValueError("summary.json: differs from final state")
     manifest["seed"] = str(manifest.get("seed", 0))
-    return {"manifest": manifest, "map": game_map, "initial": initial, "records": records, "summary": summary}
+    return {"bundle_format": "fff-replay", "bundle_version": 1,
+            "manifest": manifest, "map": game_map, "initial": initial, "records": records, "summary": summary}
 
 
-def export(directory, output):
-    payload = load_replay(directory)
+def write_html(payload, output):
     encoded = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
     for character, escape in (("<", r"\u003c"), (">", r"\u003e"), ("&", r"\u0026"), ("\u2028", r"\u2028"), ("\u2029", r"\u2029")):
         encoded = encoded.replace(character, escape)
-    template = Path(__file__).with_name("template.html").read_text(encoding="utf-8")
-    if template.count("__REPLAY_DATA__") != 1:
+    assets = Path(__file__).parent
+    template = (assets / "index.html").read_text(encoding="utf-8")
+    marker = '<script id="replay-data" type="application/json">null</script>'
+    if template.count(marker) != 1:
         raise ValueError("invalid player template")
+    template = template.replace('<link rel="stylesheet" href="player.css">',
+                                '<style>' + (assets / "player.css").read_text(encoding="utf-8") + '</style>')
+    template = template.replace('<script src="player.js"></script>',
+                                '<script>' + (assets / "player.js").read_text(encoding="utf-8") + '</script>')
     target = Path(output)
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(template.replace("__REPLAY_DATA__", encoded), encoding="utf-8")
+    target.write_text(template.replace(marker, f'<script id="replay-data" type="application/json">{encoded}</script>'), encoding="utf-8")
+    return target
+
+
+def export(directory, output):
+    return write_html(load_replay(directory), output)
+
+
+def write_data(payload, output):
+    target = Path(output)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     return target
 
 
@@ -116,12 +133,25 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("directory", type=Path)
     parser.add_argument("--out", type=Path)
+    parser.add_argument("--format", choices=("html", "json", "both"), default="both",
+                        help="default: both HTML player and single JSON data file")
     args = parser.parse_args()
     try:
-        target = export(args.directory, args.out or args.directory / "replay.html")
+        html = args.out or args.directory / "replay.html"
+        data = (args.out if args.format == "json" else args.out.with_suffix(".json") if args.out else None)
+        data = data or args.directory / "replay.json"
+        if args.format == "both" and html.resolve() == data.resolve():
+            raise ValueError("HTML and JSON outputs must differ; use --out FILE.html or --format json")
+        payload = load_replay(args.directory)
+        targets = []
+        if args.format in ("html", "both"):
+            targets.append(write_html(payload, html))
+        if args.format in ("json", "both"):
+            targets.append(write_data(payload, data))
     except (ValueError, OSError, KeyError, TypeError) as error:
         parser.exit(1, f"replay export failed: {error}\n")
-    print(target)
+    for target in targets:
+        print(target)
 
 if __name__ == "__main__":
     main()

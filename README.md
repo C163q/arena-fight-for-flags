@@ -22,7 +22,9 @@ target/release/fff-runner verify runs/my-match
 python3 viewer/export.py runs/my-match
 ```
 
-用浏览器打开生成的 `runs/my-match/replay.html`。支持播放/暂停、速度、前后单步、输入回合、滑块、START/END 切换、射击路径、血量、携旗和事件明细。导出的 HTML 不需网络或服务器。
+默认生成 `runs/my-match/replay.html` 和 `replay.json`。用浏览器打开 [通用播放器](viewer/index.html)，将 `replay.json` 拖入或点击“打开回放”；同一个页面可以反复查看不同比赛。也可以直接打开自包含的 `replay.html`，便于分享。两种方式都不需网络或服务器，已有比赛重新导出即可。
+
+播放器支持播放/暂停、速度、前后单步、指定回合、START/END、射击路径和携旗标记。受伤棋子头顶显示三格血条，满血隐藏；点击棋子查看状态。棋盘支持滚轮/按钮缩放、拖拽平移、适配和全屏；比分紧凑显示，事件/棋子/AI 明细在侧栏标签中独立滚动。仅需数据文件时运行 `python3 viewer/export.py runs/my-match --format json`。
 
 `--ai` 按队伍 ID 顺序重复提供，数量必须与地图的 `players` 一致；同一个库可以用于多支队伍。`--out` 必须不存在，避免覆盖比赛。裁判最终在 stdout 输出一行 JSON 摘要，错误写 stderr 并返回非零退出码。
 
@@ -81,6 +83,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 python3 -m unittest discover -s viewer -p 'test_*.py' -v
 python3 tests/integration.py --out runs/smoke-new
 python3 tests/browser.py runs/smoke-new/2p/replay.html
+python3 tests/viewer_usability.py runs/smoke-new/8p/replay.html runs/smoke-new/8p/replay.json
 python3 tests/parent_cleanup.py
 python3 scripts/evaluate.py --out runs/evaluation-new --report docs/evaluation-new.md
 ```

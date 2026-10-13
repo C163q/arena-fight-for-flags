@@ -225,14 +225,26 @@ void ctf_destroy(void *c){(void)c;}
     };
     parent.kill().unwrap();
     parent.wait().unwrap();
-    std::thread::sleep(std::time::Duration::from_millis(50));
-    let mut stranded = Vec::new();
-    for &pid in &children {
-        let mut status = 0;
-        // SAFETY: these known children were adopted after their parent exited.
-        let result = unsafe { libc::waitpid(pid as i32, &mut status, libc::WNOHANG) };
-        if result == 0 {
-            stranded.push(pid);
+    // Seeing two /proc children does not imply both workers have finished
+    // startup. Give their parent check/signal handler a bounded scheduling
+    // window, rather than assuming every loaded machine schedules it in 50ms.
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(1);
+    let mut stranded = children;
+    while !stranded.is_empty() && std::time::Instant::now() < deadline {
+        stranded.retain(|&pid| {
+            let mut status = 0;
+            // SAFETY: these known children were adopted after their parent exited.
+            let result = unsafe { libc::waitpid(pid as i32, &mut status, libc::WNOHANG) };
+            if result < 0 {
+                assert_eq!(
+                    std::io::Error::last_os_error().raw_os_error(),
+                    Some(libc::ECHILD)
+                );
+            }
+            result == 0
+        });
+        if !stranded.is_empty() {
+            std::thread::sleep(std::time::Duration::from_millis(5));
         }
     }
     for pid in &stranded {

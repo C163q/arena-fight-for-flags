@@ -16,7 +16,8 @@ match/
     000001.txt
     ...
   summary.json
-  replay.html       # Python 导出器生成
+  replay.html       # Python 导出器生成的自包含播放器
+  replay.json       # Python 导出器生成的单个数据文件
 ```
 
 文件 UTF-8、LF；ASCII 棋盘和字段名为 ASCII。地图 ID、队伍 ID、棋子 ID、旗 ID 全程稳定。帧号为正式回合号，初始状态为 0。
@@ -80,12 +81,22 @@ target/release/fff-runner verify runs/my-match
 
 ```sh
 python3 viewer/export.py runs/my-match
-# 或指定另一位置
+# 只导出单个数据文件，供通用页面载入
+python3 viewer/export.py runs/my-match --format json
+# 指定另一位置；默认同时生成 my-replay.html 与 my-replay.json
 python3 viewer/export.py runs/my-match --out /tmp/my-replay.html
+# 仅生成自包含 HTML
+python3 viewer/export.py runs/my-match --format html
 ```
 
-导出器仅依赖 Python 标准库，校验地图标记、状态中的棋子/旗/旗点来源/终局、调用元数据与播放器消费的事件字段；错误包含文件和字段路径，然后才将数据安全嵌入一个 HTML。完整规则一致性由上述 Rust 验证器负责。名称/事件通过文本渲染，嵌入 JSON 转义 script 结束字符；64 位种子与 RNG 元数据保留十进制文本，避免 JavaScript 精度损失。
+直接用浏览器打开 [通用播放器](../viewer/index.html)，将 `replay.json` 拖入页面，或点击“打开回放”。同一页面可反复打开不同比赛，不需要服务器、网络或 AI 库。通用页面与同目录的 `player.css`、`player.js` 配套使用；分享单个文件时用自包含 `replay.html`，它也支持再载入其他比赛。已有比赛目录重新导出即可，无需重新运行比赛。
 
-支持播放/暂停、速度、前后、滑块、指定回合、START/END、比分/血量/携旗、射击路径和可展开事件。射击线使用记录中的移动前坐标，生成事件显示在移动之后的结束局面中。支持 2–8 队和不完整记录提示。
+数据包顶层为 `{bundle_format:"fff-replay",bundle_version:1,manifest,map,initial,records,summary}`，其中 initial 是初始 Snapshot，records 是按回合升序的完整 JSON 记录，summary 在未完成比赛中为 null。它是播放交换格式，不改变比赛目录原有 format_version=1，也不取代逐轮 ASCII 和 Rust 校验所需的原始文件。64 位 seed、AI seed、rng_state 以十进制字符串保存，避免 JavaScript 精度损失；JSON 不包含页面代码。
 
-当前导出上限为 25000 帧、单文件 16MiB、总输入 512MiB；超限明确报错。HTML 全部数据内嵌，不需要服务、网络或 AI 库。浏览器检查命令见 README。
+导出器仅依赖 Python 标准库，校验地图标记、状态中的棋子/旗/旗点来源/终局、调用元数据与播放器消费的事件字段；错误包含文件和字段路径。页面在切换比赛前再次检查数据包版本、地图、帧与嵌套状态/事件。损坏文件显示错误并保留已有比赛，异步选择只采用最后一次请求。完整规则一致性仍由 Rust 验证器负责。名称/事件通过文本渲染，HTML 嵌入 JSON 转义 script 结束字符。
+
+支持播放/暂停、速度、前后、滑块、指定回合、START/END、比分/携旗、射击路径和可展开事件。桌面棋盘和侧栏限制在视口内，比分两列紧凑排列，事件/棋子/AI 信息通过标签页切换并独立滚动。受伤的存活棋子头顶显示三格血条，满血时隐藏；悬停或点击棋子查看完整状态。死亡棋子的复活信息保留在“棋子”标签中。
+
+棋盘支持缩放按钮、滚轮缩放、拖动平移、“适配”和全屏。缩放范围 100%–1200%，切换回合/阶段保留视野，加载新比赛重置视野和播放进度；移动端用按钮缩放、单指拖动，布局改为上下排列。射击线使用记录中的移动前坐标，生成事件显示在结束局面中。支持 2–8 队和不完整记录提示。
+
+当前导出上限为 25000 帧、单个源文件 16MiB、总输入 512MiB；浏览器数据包限制 512MiB。超限明确报错。浏览器检查命令见 README。
