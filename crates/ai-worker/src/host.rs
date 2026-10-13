@@ -36,6 +36,7 @@ impl Process {
     fn launch(worker: &Path, library: &Path, init: CtfInit) -> io::Result<Self> {
         let (parent, child_socket) = UnixStream::pair()?;
         let fd: RawFd = child_socket.as_raw_fd();
+        let parent_pid = std::process::id() as libc::pid_t;
         let mut command = Command::new(worker);
         command
             .arg("--library")
@@ -49,6 +50,12 @@ impl Process {
         // SAFETY: only async-signal-safe libc syscalls run between fork and exec.
         unsafe {
             command.pre_exec(move || {
+                if libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGKILL, 0, 0, 0) != 0 {
+                    return Err(io::Error::last_os_error());
+                }
+                if libc::getppid() != parent_pid {
+                    return Err(io::Error::from_raw_os_error(libc::ECHILD));
+                }
                 let flags = libc::fcntl(fd, libc::F_GETFD);
                 if flags < 0 || libc::fcntl(fd, libc::F_SETFD, flags & !libc::FD_CLOEXEC) < 0 {
                     return Err(io::Error::last_os_error());

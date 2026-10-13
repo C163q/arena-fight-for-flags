@@ -61,23 +61,20 @@ pub(crate) fn resolve(e: &mut Engine, actions: &mut [TeamActions]) {
         let Action::Shoot { target } = actions[i / 3][i % 3] else {
             continue;
         };
-        let validation = if u.position.is_none() {
-            "dead_unit"
-        } else if u.carrying.is_some() {
-            "carrying_cannot_shoot"
-        } else if !e.map.contains(target) {
-            "out_of_bounds"
-        } else if u.position == Some(target) {
-            "self_target"
-        } else {
-            let p = u.position.expect("live");
-            if (i64::from(p.x) - i64::from(target.x)).abs()
-                + (i64::from(p.y) - i64::from(target.y)).abs()
-                > i64::from(RANGE)
-            {
-                "out_of_range"
-            } else {
-                "ok"
+        let validation = match u.position {
+            None => "dead_unit",
+            Some(_) if u.carrying.is_some() => "carrying_cannot_shoot",
+            Some(_) if !e.map.contains(target) => "out_of_bounds",
+            Some(p) if p == target => "self_target",
+            Some(p) => {
+                if (i64::from(p.x) - i64::from(target.x)).abs()
+                    + (i64::from(p.y) - i64::from(target.y)).abs()
+                    > i64::from(RANGE)
+                {
+                    "out_of_range"
+                } else {
+                    "ok"
+                }
             }
         };
         if validation != "ok" {

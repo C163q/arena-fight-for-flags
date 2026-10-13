@@ -327,14 +327,13 @@ pub fn validate_snapshot(map: &MapDefinition, s: &Snapshot) -> Result<(), String
         }
     }
     for u in &s.units {
-        if let Some(id) = u.carrying {
-            if !s
+        if let Some(id) = u.carrying
+            && !s
                 .flags
                 .iter()
                 .any(|f| f.id == id && f.location == FlagLocation::Carried { unit: u.id })
-            {
-                return Err("unit flag link mismatch".into());
-            }
+        {
+            return Err("unit flag link mismatch".into());
         }
     }
     let mut site_ids = BTreeSet::new();

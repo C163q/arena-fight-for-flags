@@ -1,39 +1,85 @@
 # Fight for Flags
 
-用 Rust 编写的回合制夺旗 AI 竞技项目。你编写一个暴露 C ABI 的 AI 库，根据局面为己方三个棋子安排移动、射击或等待，与其他 AI 对战。每队每回合的计算预算为 **50ms**。
+Rust 回合制夺旗 AI 竞技场。每队三个棋子，AI 通过 C ABI 一次提交全队动作，每队每回合有 50ms 墙钟预算。各队串行决策、共享同一回合开始快照，裁判随后统一射击、移动、拾旗/生成和得分。
 
-主程序负责权威结算：先射击，后移动。棋子在带障碍的棋盘上争夺随机刷新的旗帜，将旗帜带回己方 3×3 出生区得分。携旗时不能射击，死亡后等待复活。
+首版已提供 Linux 64 位裁判、独立 AI worker、三种参考 AI、2–8 队 RON 地图、逐轮 JSON/ASCII 记录、规则重放验证器和可离线打开的 HTML 播放器。
 
-各队 AI 串行调用，基于同一回合开始局面决策，收齐动作后统一结算。死亡者完整缺席随后十个回合；例如第 5 回合死亡，第 16 回合开始复活。
+## 构建和比赛
 
-携旗者死亡会将旗帜掉在死亡格；仍存活的携旗者不能移动到有地上旗帜的格子，否则该移动非法、原地不动。此限制也适用于本回合射击阶段新掉落的旗帜。
+需要 Rust 2024 工具链、Linux 64 位环境；导出播放器需要 Python 3.10+。运行测试还需要 C 编译器；浏览器检查额外使用 Playwright 与 Chromium。普通比赛和观看回放不依赖浏览器自动化包。
 
-旗帜不会自动消失。只有交回己方出生区得分、使旗帜消失后，它的来源旗点才开始随机等待重刷，当前默认等待 5–15 回合；拾取或掉落都不会让该旗点生成另一面旗。等待范围可配置，便于后续调整。
+```sh
+cargo build --release --workspace
 
-开局立即有旗的旗点数量为 `max(1,(N+1)/3)`，使用整数除法，即四舍五入且至少一个；具体旗点随机选择，其余等待 5–15 回合首次生成。
+target/release/fff-runner \
+  --map maps/arena_2p.ron \
+  --ai target/release/libfff_bot_baseline.so \
+  --ai target/release/libfff_bot_greedy.so \
+  --seed 41 \
+  --out runs/my-match
 
-正式回合中，旗帜在所有棋子移动之后尝试生成。未携旗者站在旗点上时，生成成功并立即携旗；已携旗者占据时生成失败，重新随机等待 5–15 回合。
+target/release/fff-runner verify runs/my-match
+python3 viewer/export.py runs/my-match
+```
 
-AI 可见全图和所有棋子的坐标、血量、携旗状态。棋子血量为 3，不自动恢复，每次命中扣 1；射击沿直线到达曼哈顿距离 ≤5 的指定格，只有目标格可能受伤，途经棋子不受伤也不挡弹，障碍会挡弹。
+用浏览器打开生成的 `runs/my-match/replay.html`。支持播放/暂停、速度、前后单步、输入回合、滑块、START/END 切换、射击路径、血量、携旗和事件明细。导出的 HTML 不需网络或服务器。
 
-存在友伤，合法命中其他友方棋子也扣 1 血；瞄准射手自身所在格属于非法射击，不执行。
+`--ai` 按队伍 ID 顺序重复提供，数量必须与地图的 `players` 一致；同一个库可以用于多支队伍。`--out` 必须不存在，避免覆盖比赛。裁判最终在 stdout 输出一行 JSON 摘要，错误写 stderr 并返回非零退出码。
 
-地图覆盖 2–8 名参赛者，按每人一队设计；RON 文件在运行时读取，地图最外圈全部为障碍墙。`maps/` 已提供七张候选地图资产，布局与平衡性仍待评审。
+目标分与最大回合数由 RON 的 `match_limits` 决定，CLI 不覆盖。旗帜等待范围可通过 `--flag-min-turns`、`--flag-max-turns` 调整，默认 5–15（两端包含、整数均匀随机），实际配置完整记录。
 
-比赛将产生一个回放目录，包含适合 LLM 阅读的逐回合 ASCII 局面、射击/血量/携旗事件明细，以及供回放工具消费的结构化记录。人类观众可以自动播放、单步浏览或跳到指定回合。
+## 编写 AI
 
-**当前状态：已有项目文档草案和七张 RON 地图资产，没有游戏代码、AI 库或播放器。** 文档区分用户已明确的要求与尚未确认的提案；完整决策清单见下文。
+公开 Rust 类型在 `crates/ai-abi/`，C 头文件在 [include/ctf_ai.h](include/ctf_ai.h)。导出四个函数：`ctf_abi_version`、`ctf_create`、`ctf_decide`、`ctf_destroy`。参考 [等待 AI](bots/wait/src/lib.rs)、[贪心 AI](bots/greedy/src/lib.rs) 和 [基准 AI SDK](crates/ai-sdk/src/lib.rs)。
+
+Rust AI 使用 `cdylib`，依赖 `fff-ai-abi`，可以用 `export_ai!(strategy)` 包装无状态策略。需要跨轮记忆的 AI 自行实现生命周期和私有 context。库只借用当前调用的输入/输出缓冲区，不保留其指针。
+
+```sh
+cargo build --release -p fff-bot-baseline
+```
+
+AI 可见全图、所有棋子位置/血量/携旗、当前旗帜、比分和复活信息；看不到其他队伍本轮动作、未来具体刷新时刻和引擎 RNG。50ms 包含恢复、IPC 和完整响应校验，排队不计时，初始化另有限额。超时终止该进程组，本轮整队等待，下一轮重启并丢失 context。
+
+## 规则与地图
+
+棋子 3 血，不自动回血，命中减 1。射程是曼哈顿距离 ≤5，弹道是直线，只有指定格受伤；途中棋子不伤、不挡弹，障碍边角接触也挡弹。存在友伤，射击自身格非法。
+
+携旗不能射击或移入地上旗格，回到己方 3×3 出生区得分。死亡原格掉旗，完整缺席随后十轮，t+11 开始复活。到期生成发生在移动后：未携旗者占格即时携旗，已携旗者占格失败并重新等待。旗只在交回得分时消失，来源旗点随后等待重刷。
+
+七张地图外圈全封墙，运行时 RON 加载并校验可达性。默认终局如下：
+
+| 地图人数 | 尺寸 | 目标分 | 最大回合 |
+| --- | --- | --- | --- |
+| 2 | 25×25 | 5 | 500 |
+| 3–4 | 29×29 | 6 | 650 |
+| 5 | 33×33 | 8 | 800 |
+| 6–7 | 37×37 | 10 | 1000 |
+| 8 | 41×41 | 12 | 1200 |
+
+地图是候选测试场，部分出生位到旗点的距离不同；用于正式公平排名前需要继续平衡。独立进程提供超时/崩溃隔离，不是执行恶意本地库的完整安全沙箱。
+
+## 文档与检查
 
 | 文档 | 用途 |
 | --- | --- |
-| [AGENTS.md](AGENTS.md) | 给参与项目的编码代理的工作约定 |
-| [游戏规则](docs/rules.md) | 回合阶段、射击、移动、夺旗与复活 |
-| [地图设计](docs/maps.md) | 2–8 人 RON 地图、封闭边界与加载校验 |
-| [系统架构](docs/architecture.md) | 模块划分、进程隔离、确定性与错误处理 |
-| [AI 接口](docs/api.md) | C ABI 草案、数据所有权与调用生命周期 |
-| [回放格式](docs/replay.md) | 比赛目录、ASCII 与人类播放器 |
-| [基准 AI](docs/benchmark-ai.md) | 中等强度基线的行为与评估方式 |
-| [开发路线图](docs/roadmap.md) | 分阶段交付及验收条件 |
-| [待确认决策](docs/decisions.md) | 推荐默认值、备选方案及确认状态 |
+| [AGENTS.md](AGENTS.md) | 编码代理协作约定 |
+| [规则](docs/rules.md) | 权威玩法与阶段顺序 |
+| [地图](docs/maps.md) | RON schema、七图与校验 |
+| [架构](docs/architecture.md) | 模块与进程生命周期 |
+| [API](docs/api.md) | 已实现 C ABI v1 的字段与所有权 |
+| [回放](docs/replay.md) | 实际文件格式和重放/导出约定 |
+| [基准 AI](docs/benchmark-ai.md) | 策略、评测方法与限制 |
+| [决策](docs/decisions.md) | 已接受设计与用户确认记录 |
+| [路线图](docs/roadmap.md) | 首版交付与后续工作 |
 
-建议先确认影响玩法与 API 的关键决策，再依次交付规则引擎、AI worker、对战记录、播放器和基准 AI。本文档没有给出运行命令，以免把尚未实现的工具当作现成功能。
+```sh
+cargo fmt --check
+cargo test --workspace
+cargo clippy --workspace --all-targets -- -D warnings
+python3 -m unittest discover -s viewer -p 'test_*.py' -v
+python3 tests/integration.py --out runs/smoke-new
+python3 tests/browser.py runs/smoke-new/2p/replay.html
+python3 scripts/evaluate.py --out runs/evaluation-new --report docs/evaluation-new.md
+```
+
+进程测试必须允许创建独立进程组、发送停止/恢复/终止信号；受限沙箱可能拒绝这些操作。Python 导出器验证结构，完整规则与 ASCII 一致性通过 `fff-runner verify` 检查；可读取未完成比赛的完整前缀。导出器当前最多 25000 帧、总输入 512MiB。

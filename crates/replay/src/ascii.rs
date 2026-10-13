@@ -142,7 +142,7 @@ pub fn frame(map: &MapDefinition, record: &TurnRecord) -> String {
             serde_json::to_string(&event.data).expect("event")
         );
     }
-    text.push_str("\n");
+    text.push('\n');
     text.push_str(&snapshot(map, &record.frame.start, "START"));
     text
 }

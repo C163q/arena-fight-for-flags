@@ -110,5 +110,72 @@ void ctf_destroy(void *c){(void)c;}
         summary["ai_failures"],
         serde_json::json!([0, 0, 0, 0, 0, 0, 0, 0])
     );
+    // SAFETY: test process adopts and reaps the runner's orphan workers.
+    assert_eq!(
+        unsafe { libc::prctl(libc::PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0) },
+        0
+    );
+    // A user interrupt or forced parent exit must not strand paused workers.
+    let long_ron = std::fs::read_to_string(root.join("maps/arena_2p.ron"))
+        .unwrap()
+        .replace("max_turns: 500", "max_turns: 1000000");
+    let long_map = dir.join("long.ron");
+    std::fs::write(&long_map, long_ron).unwrap();
+    let mut parent = Command::new(env!("CARGO_BIN_EXE_fff-runner"))
+        .arg("--map")
+        .arg(long_map)
+        .arg("--ai")
+        .arg(&library)
+        .arg("--ai")
+        .arg(&library)
+        .arg("--out")
+        .arg(dir.join("interrupted"))
+        .stdout(std::process::Stdio::null())
+        .spawn()
+        .unwrap();
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+    let children = loop {
+        let content = std::fs::read_to_string(format!(
+            "/proc/{}/task/{}/children",
+            parent.id(),
+            parent.id()
+        ))
+        .unwrap_or_default();
+        let pids = content
+            .split_whitespace()
+            .map(|s| s.parse::<u32>().unwrap())
+            .collect::<Vec<_>>();
+        if pids.len() == 2 {
+            break pids;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "workers did not start"
+        );
+        std::thread::sleep(std::time::Duration::from_millis(5));
+    };
+    parent.kill().unwrap();
+    parent.wait().unwrap();
+    std::thread::sleep(std::time::Duration::from_millis(50));
+    let mut stranded = Vec::new();
+    for &pid in &children {
+        let mut status = 0;
+        // SAFETY: these known children were adopted after their parent exited.
+        let result = unsafe { libc::waitpid(pid as i32, &mut status, libc::WNOHANG) };
+        if result == 0 {
+            stranded.push(pid);
+        }
+    }
+    for pid in &stranded {
+        // SAFETY: each PID is a live child owned by this test.
+        unsafe {
+            libc::kill(*pid as i32, libc::SIGKILL);
+            libc::waitpid(*pid as i32, std::ptr::null_mut(), 0);
+        }
+    }
+    assert!(
+        stranded.is_empty(),
+        "workers survived parent death: {stranded:?}"
+    );
     std::fs::remove_dir_all(dir).unwrap();
 }

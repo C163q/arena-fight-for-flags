@@ -237,54 +237,6 @@ pub type CreateFn = unsafe extern "C" fn(*const CtfInit, *mut *mut c_void) -> i3
 pub type DecideFn =
     unsafe extern "C" fn(*mut c_void, *const CtfObservation, *mut CtfTeamAction) -> i32;
 pub type DestroyFn = unsafe extern "C" fn(*mut c_void);
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn output_has_three_ordered_slots_and_rejects_partial_writes() {
-        let mut output = CtfTeamAction::waits();
-        assert!(output.valid_layout());
-        assert_eq!(output.actions.map(|a| a.unit_id), [0, 1, 2]);
-        assert!(output.actions.iter().all(|a| a.kind == WAIT));
-        output.actions[2].unit_id = u32::MAX;
-        assert!(!output.valid_layout());
-        assert!(!CtfTeamAction::unwritten().valid_layout());
-    }
-    #[test]
-    fn null_observation_is_rejected_before_dereference() {
-        assert!(unsafe { view(std::ptr::null()) }.is_err());
-    }
-    #[test]
-    fn c_header_layout_and_symbols_match_rust_contract() {
-        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-        let dir = std::env::temp_dir().join(format!("fff-abi-{}", std::process::id()));
-        std::fs::create_dir_all(&dir).unwrap();
-        let source = dir.join("layout.c");
-        let output = dir.join("layout");
-        std::fs::write(&source,format!("#include <stddef.h>\n#include \"ctf_ai.h\"\n_Static_assert(sizeof(CtfInit)=={},\"init\");\n_Static_assert(sizeof(CtfTeamAction)=={},\"action\");\n_Static_assert(sizeof(CtfUnit)=={},\"unit\");\n_Static_assert(sizeof(CtfObservation)=={},\"observation\");\n_Static_assert(offsetof(CtfObservation,cells)=={},\"cells offset\");\nint main(void){{return CTF_ABI_VERSION!=1;}}\n",std::mem::size_of::<CtfInit>(),std::mem::size_of::<CtfTeamAction>(),std::mem::size_of::<CtfUnit>(),std::mem::size_of::<CtfObservation>(),std::mem::offset_of!(CtfObservation,cells))).unwrap();
-        assert!(
-            std::process::Command::new("cc")
-                .arg("-std=c11")
-                .arg("-Wall")
-                .arg("-Werror")
-                .arg("-I")
-                .arg(root.join("include"))
-                .arg(&source)
-                .arg("-o")
-                .arg(&output)
-                .status()
-                .unwrap()
-                .success()
-        );
-        assert!(
-            std::process::Command::new(output)
-                .status()
-                .unwrap()
-                .success()
-        );
-        std::fs::remove_dir_all(dir).unwrap();
-    }
-}
 
 impl CtfInit {
     pub fn valid(&self) -> bool {
@@ -361,4 +313,53 @@ macro_rules! export_ai {
         #[unsafe(no_mangle)]
         pub unsafe extern "C" fn ctf_destroy(_context: *mut std::ffi::c_void) {}
     };
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn output_has_three_ordered_slots_and_rejects_partial_writes() {
+        let mut output = CtfTeamAction::waits();
+        assert!(output.valid_layout());
+        assert_eq!(output.actions.map(|a| a.unit_id), [0, 1, 2]);
+        assert!(output.actions.iter().all(|a| a.kind == WAIT));
+        output.actions[2].unit_id = u32::MAX;
+        assert!(!output.valid_layout());
+        assert!(!CtfTeamAction::unwritten().valid_layout());
+    }
+    #[test]
+    fn null_observation_is_rejected_before_dereference() {
+        assert!(unsafe { view(std::ptr::null()) }.is_err());
+    }
+    #[test]
+    fn c_header_layout_and_symbols_match_rust_contract() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let dir = std::env::temp_dir().join(format!("fff-abi-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let source = dir.join("layout.c");
+        let output = dir.join("layout");
+        std::fs::write(&source,format!("#include <stddef.h>\n#include \"ctf_ai.h\"\n_Static_assert(sizeof(CtfInit)=={},\"init\");\n_Static_assert(sizeof(CtfTeamAction)=={},\"action\");\n_Static_assert(sizeof(CtfUnit)=={},\"unit\");\n_Static_assert(sizeof(CtfObservation)=={},\"observation\");\n_Static_assert(offsetof(CtfObservation,cells)=={},\"cells offset\");\nint main(void){{return CTF_ABI_VERSION!=1;}}\n",std::mem::size_of::<CtfInit>(),std::mem::size_of::<CtfTeamAction>(),std::mem::size_of::<CtfUnit>(),std::mem::size_of::<CtfObservation>(),std::mem::offset_of!(CtfObservation,cells))).unwrap();
+        assert!(
+            std::process::Command::new("cc")
+                .arg("-std=c11")
+                .arg("-Wall")
+                .arg("-Werror")
+                .arg("-I")
+                .arg(root.join("include"))
+                .arg(&source)
+                .arg("-o")
+                .arg(&output)
+                .status()
+                .unwrap()
+                .success()
+        );
+        assert!(
+            std::process::Command::new(output)
+                .status()
+                .unwrap()
+                .success()
+        );
+        std::fs::remove_dir_all(dir).unwrap();
+    }
 }

@@ -115,16 +115,14 @@ pub fn verify_directory(path: &Path) -> Result<(), String> {
                 .get("validation")
                 .and_then(|v| v.as_str())
                 .is_some_and(|v| v != "ok")
-            {
-                if let Some(team) = event
+                && let Some(team) = event
                     .data
                     .get("unit")
                     .or_else(|| event.data.get("shooter"))
                     .and_then(|u| u.get("team_id"))
                     .and_then(|v| v.as_u64())
-                {
-                    invalid[team as usize] += 1;
-                }
+            {
+                invalid[team as usize] += 1;
             }
         }
         if read(&root, &format!("frames/{turn:06}.txt"))? != ascii::frame(&map, &record).as_bytes()

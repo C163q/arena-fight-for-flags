@@ -138,6 +138,7 @@ dependencies = [
  "fff-ai-worker",
  "fff-engine",
  "fff-replay",
+ "libc",
  "serde_json",
  "sha2",
 ]

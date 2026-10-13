@@ -10,3 +10,6 @@ fff-ai-worker = { path = "../ai-worker" }
 serde_json.workspace = true
 sha2.workspace = true
 fff-replay = { path = "../replay" }
+
+[dev-dependencies]
+libc.workspace = true
