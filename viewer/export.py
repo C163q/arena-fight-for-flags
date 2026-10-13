@@ -5,16 +5,11 @@ For full rules/ASCII verification, run `fff-runner verify MATCH_DIR` first.
 import argparse
 import json
 from pathlib import Path
+from schema import Validator, integer, obj, array, text, U64
 
 MAX_FILE = 16 * 1024 * 1024
 MAX_TOTAL = 512 * 1024 * 1024
 MAX_FRAMES = 25000
-
-
-def integer(value, low, high, label):
-    if type(value) is not int or not low <= value <= high:
-        raise ValueError(f"invalid {label}: expected integer {low}..{high}")
-    return value
 
 
 def load_replay(directory):
@@ -49,91 +44,56 @@ def load_replay(directory):
     game_map = read("map.json")
     if game_map.get("format_version") != 1:
         raise ValueError("unsupported map format version")
-    width = integer(game_map.get("width"), 9, 128, "map width")
-    height = integer(game_map.get("height"), 9, 128, "map height")
-    players = integer(game_map.get("players"), 2, 8, "team count")
-    terrain = game_map.get("terrain")
-    if not isinstance(terrain, list) or len(terrain) != height or any(not isinstance(row, str) or len(row) != width or set(row) - {"#", "."} for row in terrain):
-        raise ValueError("invalid terrain")
-    if any(c != "#" for c in terrain[0] + terrain[-1]) or any(row[0] != "#" or row[-1] != "#" for row in terrain):
-        raise ValueError("unsealed map border")
-    if len(manifest.get("teams", [])) != players or any(team.get("team_id") != i or not isinstance(team.get("name"), str) for i, team in enumerate(manifest["teams"])):
-        raise ValueError("invalid teams")
-    homes = game_map.get("spawn_regions", [])
-    sites = game_map.get("flag_points", [])
-    if len(homes) != players or not 1 <= len(sites) <= 32:
-        raise ValueError("invalid homes or flag sites")
-
-    def position(p, label):
-        if not isinstance(p, dict):
-            raise ValueError(f"invalid {label} position")
-        x = integer(p.get("x"), 0, width - 1, f"{label} x")
-        y = integer(p.get("y"), 0, height - 1, f"{label} y")
-        if terrain[y][x] != ".":
-            raise ValueError(f"{label} position is blocked")
-        return x, y
-
-    def state(value, turn):
-        if not isinstance(value, dict) or value.get("turn") != turn:
-            raise ValueError("invalid state turn")
-        scores = value.get("scores", [])
-        if len(scores) != players:
-            raise ValueError("invalid scores")
-        for score in scores:
-            integer(score, 0, 4294967295, "score")
-        units = value.get("units", [])
-        if len(units) != players * 3:
-            raise ValueError("invalid unit count")
-        occupied = set()
-        for i, unit in enumerate(units):
-            if unit.get("id") != {"team_id": i // 3, "unit_id": i % 3}:
-                raise ValueError("invalid unit ID")
-            hp = integer(unit.get("hp"), 0, 3, "unit hp")
-            p = unit.get("position")
-            if p is None:
-                if hp != 0 or unit.get("carrying") is not None:
-                    raise ValueError("invalid dead unit")
-            else:
-                cell = position(p, "unit")
-                if hp == 0 or cell in occupied:
-                    raise ValueError("invalid unit occupancy")
-                occupied.add(cell)
-        flags = value.get("flags", [])
-        if not isinstance(flags, list) or len(flags) > len(sites):
-            raise ValueError("invalid flags")
-        for flag in flags:
-            location = flag.get("location", {})
-            if location.get("state") == "ground":
-                position(location.get("position"), "flag")
-            elif location.get("state") != "carried":
-                raise ValueError("invalid flag location")
-        # Preserve exact 64-bit metadata when JSON is parsed by JavaScript.
-        value["rng_state"] = str(value.get("rng_state", 0))
-        return value
-
+    validator=Validator(game_map)
+    players=validator.players
+    if last>validator.max_turns:
+        raise ValueError("manifest.json.last_complete_turn: exceeds map limit")
+    teams=array(manifest.get("teams"),"manifest.json.teams")
+    if len(teams)!=players:
+        raise ValueError("manifest.json.teams: wrong count")
+    for i,team in enumerate(teams):
+        label=f"manifest.json.teams[{i}]"
+        team=obj(team,label)
+        integer(team.get("team_id"),i,i,label+".team_id")
+        text(team.get("name"),label+".name")
+        if team.get("ai_seed") is not None:
+            team["ai_seed"]=str(integer(team["ai_seed"],0,U64,label+".ai_seed"))
+    text(manifest.get("match_id"),"manifest.json.match_id")
+    integer(manifest.get("seed"),0,U64,"manifest.json.seed")
     initial_record = read("initial.json")
     if initial_record.get("format_version") != 1:
         raise ValueError("unsupported initial format version")
-    initial = state(initial_record.get("state"), 0)
+    initial = validator.state(initial_record.get("state"), 0, "initial.json.state")
     records = []
     for turn in range(1, last + 1):
         record = read(f"frames/{turn:06d}.json")
         if record.get("format_version") != 1 or record.get("call_order") != list(range(players)):
             raise ValueError(f"invalid frame metadata at {turn}")
-        frame = record.get("frame", {})
+        frame = obj(record.get("frame"),f"frames/{turn:06d}.json.frame")
         if frame.get("turn") != turn:
             raise ValueError(f"invalid frame turn at {turn}")
-        state(frame.get("start"), turn)
-        state(frame.get("end"), turn)
+        validator.state(frame.get("start"), turn, f"frames/{turn:06d}.json.frame.start")
+        validator.state(frame.get("end"), turn, f"frames/{turn:06d}.json.frame.end")
         if not isinstance(frame.get("events"), list) or len(frame["events"]) > 10000:
             raise ValueError(f"invalid frame events at {turn}")
-        calls = record.get("calls", [])
-        if len(calls) != players or any(call.get("team_id") != i or call.get("turn") != turn for i, call in enumerate(calls)):
-            raise ValueError(f"invalid frame calls at {turn}")
+        for i,event in enumerate(frame["events"]):
+            validator.event(event,f"frames/{turn:06d}.json.frame.events[{i}]")
+        calls = array(record.get("calls"),f"frames/{turn:06d}.json.calls")
+        if len(calls)!=players:
+            raise ValueError(f"frames/{turn:06d}.json.calls: wrong count")
+        for i,call in enumerate(calls):
+            label=f"frames/{turn:06d}.json.calls[{i}]"
+            call=obj(call,label)
+            integer(call.get("team_id"),i,i,label+".team_id")
+            integer(call.get("turn"),turn,turn,label+".turn")
+            if call.get("status") not in ("ok","timeout","crash","load_error","protocol_error","ai_error"):
+                raise ValueError(label+".status: unknown status")
+            integer(call.get("elapsed_us"),0,U64,label+".elapsed_us")
+            integer(call.get("init_elapsed_us"),0,U64,label+".init_elapsed_us")
         records.append(record)
     summary = read("summary.json") if manifest["status"] == "complete" else None
-    if summary and (summary.get("turns") != last or summary.get("scores") != (records[-1]["frame"]["end"]["scores"] if records else initial["scores"])):
-        raise ValueError("summary differs from final state")
+    if summary is not None and (summary.get("complete") is not True or summary.get("turns") != last or summary.get("scores") != (records[-1]["frame"]["end"]["scores"] if records else initial["scores"])):
+        raise ValueError("summary.json: differs from final state")
     manifest["seed"] = str(manifest.get("seed", 0))
     return {"manifest": manifest, "map": game_map, "initial": initial, "records": records, "summary": summary}
 

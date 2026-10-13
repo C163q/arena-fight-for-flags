@@ -124,6 +124,7 @@ dependencies = [
 name = "fff-replay"
 version = "0.1.0"
 dependencies = [
+ "fff-ai-abi",
  "fff-ai-worker",
  "fff-engine",
  "ron",

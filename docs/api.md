@@ -26,7 +26,7 @@ void ctf_destroy(void *context);
 | `max_turns`, `target_score` | RON `match_limits`，不是 CLI 覆盖值 |
 | `flag_respawn_min_turns`, `flag_respawn_max_turns` | 本场生成等待范围，默认 5、15，两端包含、整数均匀随机 |
 | `first_turn`, `restart_count` | 本次初始化将服务的回合、此前启动失败/重启次数 |
-| `seed` | 己方独立 64 位种子，不共享引擎 RNG |
+| `seed` | 己方独立 64 位种子，默认来自 OS 随机源；由 `--ai-seed` 可显式指定，不从引擎种子派生 |
 | `decision_budget_us` | 50000 |
 | `initial_flag_count` | `max(1,(N+1)/3)`，整数除法 |
 | `max_hp`, `shot_damage`, `shot_range` | 3、1、5；射程度量固定为曼哈顿 |

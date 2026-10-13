@@ -8,6 +8,8 @@ pub struct AiInfo {
     pub name: String,
     pub library_path: String,
     pub library_sha256: String,
+    #[serde(default)]
+    pub ai_seed: Option<u64>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Manifest {

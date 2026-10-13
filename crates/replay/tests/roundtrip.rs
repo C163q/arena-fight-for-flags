@@ -1,3 +1,4 @@
+use fff_ai_abi::CtfTeamAction;
 use fff_ai_worker::CallReport;
 use fff_engine::*;
 use fff_replay::*;
@@ -20,6 +21,7 @@ fn record(name: &str, complete: bool) -> PathBuf {
             name: "bot </script><script>alert(1)</script>".into(),
             library_path: "not-present.so".into(),
             library_sha256: "0".repeat(64),
+            ai_seed: None,
         })
         .collect();
     let mut recorder =
@@ -37,7 +39,11 @@ fn record(name: &str, complete: bool) -> PathBuf {
                 init_elapsed_us: 0,
                 restart_count: 0,
                 actions: [Action::Wait; 3],
-                raw_output: None,
+                raw_output: if team == 0 {
+                    None
+                } else {
+                    Some(CtfTeamAction::waits())
+                },
                 error: None,
             })
             .collect::<Vec<_>>();
@@ -95,4 +101,33 @@ fn state_tampering_and_directory_escape_are_rejected() {
     std::os::unix::fs::symlink("/etc/passwd", path.join("map.json")).unwrap();
     assert!(verify_directory(&path).is_err());
     std::fs::remove_dir_all(path).unwrap();
+}
+
+#[test]
+fn successful_calls_reject_missing_or_inconsistent_raw_abi_outputs() {
+    for kind in ["version", "slots", "actions", "missing"] {
+        let path = record(&format!("raw-{kind}"), true);
+        verify_directory(&path).unwrap();
+        let file = path.join("frames/000001.json");
+        let mut value: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&file).unwrap()).unwrap();
+        let raw = &mut value["calls"][1]["raw_output"];
+        match kind {
+            "version" => raw["abi_version"] = 999.into(),
+            "slots" => raw["actions"][2]["unit_id"] = 99.into(),
+            "actions" => {
+                raw["actions"][0]["kind"] = 2.into();
+                raw["actions"][0]["target_x"] = 4.into();
+                raw["actions"][0]["target_y"] = 4.into();
+            }
+            "missing" => *raw = serde_json::Value::Null,
+            _ => unreachable!(),
+        }
+        std::fs::write(&file, serde_json::to_vec(&value).unwrap()).unwrap();
+        assert!(
+            verify_directory(&path).is_err(),
+            "accepted tampered raw output: {kind}"
+        );
+        std::fs::remove_dir_all(path).unwrap();
+    }
 }

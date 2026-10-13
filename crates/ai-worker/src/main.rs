@@ -1,3 +1,4 @@
+mod lifecycle;
 use fff_ai_abi::*;
 use fff_ai_worker::protocol::{self, Request, Response};
 use libloading::Library;
@@ -21,9 +22,14 @@ fn run() -> Result<(), String> {
     let mut args = std::env::args_os().skip(1);
     let mut path = None;
     let mut fd = None;
+    let mut parent = None;
     while let Some(arg) = args.next() {
         if arg == "--library" {
             path = args.next().map(PathBuf::from);
+        } else if arg == "--parent" {
+            parent = args
+                .next()
+                .and_then(|s| s.to_str().and_then(|s| s.parse::<libc::pid_t>().ok()));
         } else if arg == "--fd" {
             fd = args
                 .next()
@@ -34,6 +40,11 @@ fn run() -> Result<(), String> {
     }
     let path = path.ok_or("missing library")?;
     let fd = fd.filter(|&fd| fd > 2).ok_or("missing inherited socket")?;
+    lifecycle::install(
+        parent
+            .filter(|&p| p > 0)
+            .ok_or("missing expected parent PID")?,
+    )?;
     // SAFETY: the parent transfers this inherited descriptor solely to this worker.
     let mut socket = unsafe { UnixStream::from_raw_fd(fd) };
     let Request::Init { init } =

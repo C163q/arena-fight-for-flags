@@ -10,3 +10,6 @@ fff-ai-worker = { path = "../ai-worker" }
 serde.workspace = true
 serde_json.workspace = true
 ron.workspace = true
+
+[dev-dependencies]
+fff-ai-abi = { path = "../ai-abi" }

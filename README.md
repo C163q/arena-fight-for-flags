@@ -26,6 +26,8 @@ python3 viewer/export.py runs/my-match
 
 `--ai` 按队伍 ID 顺序重复提供，数量必须与地图的 `players` 一致；同一个库可以用于多支队伍。`--out` 必须不存在，避免覆盖比赛。裁判最终在 stdout 输出一行 JSON 摘要，错误写 stderr 并返回非零退出码。
 
+`--seed` 只固定引擎随机流。默认各队 AI 种子来自独立 OS 随机源并写入 manifest；需要重现随机策略时，按队伍顺序重复传 `--ai-seed N`（全部队伍都提供）。AI 种子不从引擎种子派生。
+
 目标分与最大回合数由 RON 的 `match_limits` 决定，CLI 不覆盖。旗帜等待范围可通过 `--flag-min-turns`、`--flag-max-turns` 调整，默认 5–15（两端包含、整数均匀随机），实际配置完整记录。
 
 ## 编写 AI
@@ -79,6 +81,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 python3 -m unittest discover -s viewer -p 'test_*.py' -v
 python3 tests/integration.py --out runs/smoke-new
 python3 tests/browser.py runs/smoke-new/2p/replay.html
+python3 tests/parent_cleanup.py
 python3 scripts/evaluate.py --out runs/evaluation-new --report docs/evaluation-new.md
 ```
 

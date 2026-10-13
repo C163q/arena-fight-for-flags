@@ -37,7 +37,7 @@ match/
 
 `Snapshot` 含 turn、scores、units、flags、sites、rng_state、next_flag_id、outcome。每个 Unit 含 id、position 或 null、hp、carrying 或 null、respawn_at_turn 或 null。旗的位置为 `location:{state:"ground",position:{x,y}}` 或 `location:{state:"carried",unit:{team_id,unit_id}}`。
 
-sites 保留 active_flag_id 或 next_attempt_turn、origin、scheduled_by，用于追踪来源旗和重试任务。完整内部调度及 RNG 用于校验；不会原样传给 AI。每队调用记录包含 status、elapsed_us、init_elapsed_us、restart_count、实际 actions、raw_output 和有界 error。状态区分 ok、timeout、crash、load_error、protocol_error、ai_error。
+sites 保留 active_flag_id 或 next_attempt_turn、origin、scheduled_by，用于追踪来源旗和重试任务。完整内部调度及 RNG 用于校验；不会原样传给 AI。teams 中记录每队 ai_seed（旧记录允许缺省），用于重现随机策略；它独立于引擎 seed。每队调用记录包含 status、elapsed_us、init_elapsed_us、restart_count、实际 actions、raw_output 和有界 error。状态区分 ok、timeout、crash、load_error、protocol_error、ai_error。
 
 ## 事件与 LLM 明细
 
@@ -74,7 +74,7 @@ TXT 排列为 END 棋盘/对象表、AI_CALLS、ACTIONS、EVENTS，最后附完�
 target/release/fff-runner verify runs/my-match
 ```
 
-验证器校验版本、路径/大小、地图与原始 RON、初始种子、逐轮调用与动作；重新执行规则引擎，比对完整状态、事件、JSON/TXT 和最终统计。它不加载原 AI，不要求超时再次发生。缺帧、篡改、目录逃逸和文本不一致均报错。
+验证器校验版本、路径/大小、地图与原始 RON、初始种子、逐轮调用与动作；成功调用必须有合法原始 ABI 输出，解码结果与提交动作一致；重新执行规则引擎，比对完整状态、事件、JSON/TXT 和最终统计。它不加载原 AI，不要求超时再次发生。缺帧、篡改、目录逃逸和文本不一致均报错。
 
 ## 导出与播放
 
@@ -84,7 +84,7 @@ python3 viewer/export.py runs/my-match
 python3 viewer/export.py runs/my-match --out /tmp/my-replay.html
 ```
 
-导出器仅依赖 Python 标准库，做结构校验并将数据安全嵌入一个 HTML。完整规则一致性由上述 Rust 验证器负责。名称/事件通过文本渲染，嵌入 JSON 转义 script 结束字符；64 位种子与 RNG 元数据保留十进制文本，避免 JavaScript 精度损失。
+导出器仅依赖 Python 标准库，校验地图标记、状态中的棋子/旗/旗点来源/终局、调用元数据与播放器消费的事件字段；错误包含文件和字段路径，然后才将数据安全嵌入一个 HTML。完整规则一致性由上述 Rust 验证器负责。名称/事件通过文本渲染，嵌入 JSON 转义 script 结束字符；64 位种子与 RNG 元数据保留十进制文本，避免 JavaScript 精度损失。
 
 支持播放/暂停、速度、前后、滑块、指定回合、START/END、比分/血量/携旗、射击路径和可展开事件。射击线使用记录中的移动前坐标，生成事件显示在移动之后的结束局面中。支持 2–8 队和不完整记录提示。
 

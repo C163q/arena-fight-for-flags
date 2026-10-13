@@ -8,9 +8,10 @@ fn match_uses_ron_limits_and_rejects_unknown_overrides_or_wrong_team_count() {
     let library = dir.join("wait.so");
     std::fs::write(&source,r#"
 #include "ctf_ai.h"
+static uint64_t seen_seed;
 uint32_t ctf_abi_version(void){return 1;}
-int32_t ctf_create(const CtfInit *i,void **c){(void)i;*c=0;return 0;}
-int32_t ctf_decide(void *c,const CtfObservation *o,CtfTeamAction *a){(void)c;(void)o;a->abi_version=1;a->struct_size=sizeof(*a);for(uint32_t i=0;i<3;i++){a->actions[i]=(CtfAction){.unit_id=i};}return 0;}
+int32_t ctf_create(const CtfInit *i,void **c){seen_seed=i->seed;*c=0;return 0;}
+int32_t ctf_decide(void *c,const CtfObservation *o,CtfTeamAction *a){(void)c;(void)o;a->abi_version=1;a->struct_size=sizeof(*a);for(uint32_t i=0;i<3;i++){a->actions[i]=(CtfAction){.unit_id=i,.target_x=(int32_t)(seen_seed&0x7fffffffu)};}return 0;}
 void ctf_destroy(void *c){(void)c;}
 "#).unwrap();
     assert!(
@@ -109,6 +110,74 @@ void ctf_destroy(void *c){(void)c;}
     assert_eq!(
         summary["ai_failures"],
         serde_json::json!([0, 0, 0, 0, 0, 0, 0, 0])
+    );
+    let manifest_a: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(dir.join("match/manifest.json")).unwrap()).unwrap();
+    let repeated = Command::new(env!("CARGO_BIN_EXE_fff-runner"))
+        .arg("--map")
+        .arg(&path)
+        .arg("--ai")
+        .arg(&library)
+        .arg("--ai")
+        .arg(&library)
+        .arg("--out")
+        .arg(dir.join("repeat"))
+        .output()
+        .unwrap();
+    assert!(repeated.status.success());
+    let manifest_b: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(dir.join("repeat/manifest.json")).unwrap()).unwrap();
+    let seeds_a = manifest_a["teams"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|t| t["ai_seed"].as_u64().expect("AI seed must be recorded"))
+        .collect::<Vec<_>>();
+    let seeds_b = manifest_b["teams"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|t| t["ai_seed"].as_u64().expect("AI seed must be recorded"))
+        .collect::<Vec<_>>();
+    assert_ne!(
+        seeds_a, seeds_b,
+        "default AI seed must be independent of the repeated engine seed"
+    );
+    assert_eq!(
+        std::fs::read(dir.join("match/initial.json")).unwrap(),
+        std::fs::read(dir.join("repeat/initial.json")).unwrap()
+    );
+    let explicit = Command::new(env!("CARGO_BIN_EXE_fff-runner"))
+        .arg("--map")
+        .arg(&path)
+        .arg("--ai")
+        .arg(&library)
+        .arg("--ai")
+        .arg(&library)
+        .args(["--ai-seed", "314", "--ai-seed", "159"])
+        .arg("--out")
+        .arg(dir.join("seeded"))
+        .output()
+        .unwrap();
+    assert!(
+        explicit.status.success(),
+        "{}",
+        String::from_utf8_lossy(&explicit.stderr)
+    );
+    let manifest: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(dir.join("seeded/manifest.json")).unwrap()).unwrap();
+    assert_eq!(manifest["teams"][0]["ai_seed"], 314);
+    assert_eq!(manifest["teams"][1]["ai_seed"], 159);
+    let frame: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(dir.join("seeded/frames/000001.json")).unwrap())
+            .unwrap();
+    assert_eq!(
+        frame["calls"][0]["raw_output"]["actions"][0]["target_x"],
+        314
+    );
+    assert_eq!(
+        frame["calls"][1]["raw_output"]["actions"][0]["target_x"],
+        159
     );
     // SAFETY: test process adopts and reaps the runner's orphan workers.
     assert_eq!(

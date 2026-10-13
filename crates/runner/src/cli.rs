@@ -1,10 +1,11 @@
 use std::path::PathBuf;
-pub const USAGE: &str = "fff-runner --map MAP.ron --ai TEAM.so --ai TEAM.so [--ai ...] --out MATCH_DIR [--seed N] [--flag-min-turns 5 --flag-max-turns 15]";
+pub const USAGE: &str = "fff-runner --map MAP.ron --ai TEAM.so --ai TEAM.so [--ai ...] --out MATCH_DIR [--seed N] [--ai-seed N ...] [--flag-min-turns 5 --flag-max-turns 15]";
 pub struct Options {
     pub map: PathBuf,
     pub ais: Vec<PathBuf>,
     pub out: PathBuf,
     pub seed: u64,
+    pub ai_seeds: Vec<u64>,
     pub flag_min: u32,
     pub flag_max: u32,
 }
@@ -14,6 +15,7 @@ pub fn parse() -> Result<Option<Options>, String> {
     let mut out = None;
     let mut ais = Vec::new();
     let mut seed = 0;
+    let mut ai_seeds = Vec::new();
     let mut flag_min = 5;
     let mut flag_max = 15;
     while let Some(arg) = args.next() {
@@ -26,6 +28,7 @@ pub fn parse() -> Result<Option<Options>, String> {
             "--ai",
             "--out",
             "--seed",
+            "--ai-seed",
             "--flag-min-turns",
             "--flag-max-turns",
         ]
@@ -48,6 +51,13 @@ pub fn parse() -> Result<Option<Options>, String> {
                 }
             }
             "--ai" => ais.push(PathBuf::from(value)),
+            "--ai-seed" => ai_seeds.push(
+                value
+                    .to_str()
+                    .ok_or("invalid AI seed")?
+                    .parse()
+                    .map_err(|_| "invalid AI seed")?,
+            ),
             "--seed" => {
                 seed = value
                     .to_str()
@@ -77,11 +87,15 @@ pub fn parse() -> Result<Option<Options>, String> {
         ais,
         out: out.ok_or("--out is required")?,
         seed,
+        ai_seeds,
         flag_min,
         flag_max,
     };
     if !(2..=8).contains(&options.ais.len()) {
         return Err("--ai must be supplied for 2–8 teams".into());
+    }
+    if !options.ai_seeds.is_empty() && options.ai_seeds.len() != options.ais.len() {
+        return Err("--ai-seed must be supplied once per team, or omitted".into());
     }
     if options.out.exists() {
         return Err(format!("output already exists: {}", options.out.display()));

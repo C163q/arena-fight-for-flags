@@ -39,6 +39,10 @@ fn run() -> Result<(), String> {
     let mut hosts = Vec::new();
     let mut teams = Vec::new();
     for (i, path) in options.ais.iter().enumerate() {
+        let ai_seed = match options.ai_seeds.get(i) {
+            Some(seed) => *seed,
+            None => random_ai_seed()?,
+        };
         let library =
             std::fs::canonicalize(path).map_err(|e| format!("{}: {e}", path.display()))?;
         let mut file = std::fs::File::open(&library).map_err(|e| e.to_string())?;
@@ -58,18 +62,12 @@ fn run() -> Result<(), String> {
                 .map_or_else(|| format!("team{i}"), |s| s.to_string_lossy().into_owned()),
             library_path: library.to_string_lossy().into_owned(),
             library_sha256: format!("{:x}", digest.finalize()),
+            ai_seed: Some(ai_seed),
         });
         hosts.push(TeamHost::new(
             &worker,
             &library,
-            initialization(
-                &map,
-                &config,
-                i as u32,
-                options
-                    .seed
-                    .wrapping_add((i as u64).wrapping_mul(0x9e3779b97f4a7c15)),
-            ),
+            initialization(&map, &config, i as u32, ai_seed),
         ));
     }
     let raw = std::fs::read_to_string(&options.map).map_err(|e| e.to_string())?;
@@ -122,6 +120,13 @@ fn run() -> Result<(), String> {
         serde_json::to_string(&summary).map_err(|e| e.to_string())?
     );
     Ok(())
+}
+fn random_ai_seed() -> Result<u64, String> {
+    let mut bytes = [0u8; 8];
+    std::fs::File::open("/dev/urandom")
+        .and_then(|mut file| file.read_exact(&mut bytes))
+        .map_err(|e| format!("independent AI seed: {e}"))?;
+    Ok(u64::from_le_bytes(bytes))
 }
 fn main() {
     if let Err(error) = run() {

@@ -78,6 +78,34 @@ class ExportTests(unittest.TestCase):
         self.write("frames/000001.json", self.record)
         with self.assertRaisesRegex(ValueError, "unit|棋子|占格"):
             export.load_replay(self.root)
+    def test_player_consumed_nested_shapes_are_rejected_with_field_paths(self):
+        mutations = [
+            ("initial.json", ("state", "sites"), None),
+            ("initial.json", ("state", "outcome"), {"winners": None, "reason": "max_turns"}),
+            ("initial.json", ("state", "units", 0), None),
+            ("map.json", ("spawn_regions", 0), None),
+            ("map.json", ("flag_points", 0, "x"), "bad"),
+            ("frames/000001.json", ("frame", "events"), [None]),
+            ("frames/000001.json", ("frame", "events"), [{"event_id": "x", "phase": "shoot", "type": "shot", "shooter": None}]),
+            ("frames/000001.json", ("calls", 0), None),
+        ]
+        for filename, fields, bad in mutations:
+            with self.subTest(filename=filename, fields=fields):
+                path = self.root / filename
+                original = path.read_text()
+                value = json.loads(original)
+                nested = value
+                for field in fields[:-1]:
+                    nested = nested[field]
+                nested[fields[-1]] = bad
+                self.write(filename, value)
+                try:
+                    with self.assertRaises(ValueError) as caught:
+                        export.load_replay(self.root)
+                    self.assertIn(filename, str(caught.exception))
+                finally:
+                    path.write_text(original)
+
     def test_incomplete_prefix_does_not_require_summary(self):
         self.manifest["status"] = "in_progress"
         self.write("manifest.json", self.manifest)

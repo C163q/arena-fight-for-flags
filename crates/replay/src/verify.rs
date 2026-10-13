@@ -101,8 +101,21 @@ pub fn verify_directory(path: &Path) -> Result<(), String> {
                 if call.actions != [Action::Wait; 3] {
                     return Err(format!("{file}: failed AI must wait"));
                 }
-            } else if call.elapsed_us > 50_000 {
-                return Err(format!("{file}: accepted response exceeded 50ms"));
+            } else {
+                if call.elapsed_us > 50_000 {
+                    return Err(format!("{file}: accepted response exceeded 50ms"));
+                }
+                let raw = call
+                    .raw_output
+                    .as_ref()
+                    .ok_or_else(|| format!("{file}: successful call missing raw ABI output"))?;
+                let decoded =
+                    fff_ai_worker::decode_output(raw).map_err(|e| format!("{file}: {e}"))?;
+                if decoded != call.actions {
+                    return Err(format!(
+                        "{file}: raw ABI output differs from submitted actions"
+                    ));
+                }
             }
         }
         let actual = engine.resolve_turn(record.frame.requested.clone())?;

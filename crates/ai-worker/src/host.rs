@@ -41,6 +41,8 @@ impl Process {
         command
             .arg("--library")
             .arg(library)
+            .arg("--parent")
+            .arg(parent_pid.to_string())
             .arg("--fd")
             .arg(fd.to_string())
             .stdin(Stdio::null())
@@ -50,7 +52,7 @@ impl Process {
         // SAFETY: only async-signal-safe libc syscalls run between fork and exec.
         unsafe {
             command.pre_exec(move || {
-                if libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGKILL, 0, 0, 0) != 0 {
+                if libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGCONT, 0, 0, 0) != 0 {
                     return Err(io::Error::last_os_error());
                 }
                 if libc::getppid() != parent_pid {

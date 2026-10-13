@@ -146,3 +146,12 @@ fn decode(a: CtfAction) -> Action {
         },
     }
 }
+
+/// Validate a complete C result and decode its original per-unit submissions.
+/// Game legality is checked later by the engine, not by this layout boundary.
+pub fn decode_output(output: &CtfTeamAction) -> Result<TeamActions, String> {
+    if !output.valid_layout() {
+        return Err("invalid raw ABI version, size or slots".into());
+    }
+    Ok(output.actions.map(decode))
+}
