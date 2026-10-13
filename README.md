@@ -78,6 +78,8 @@ python3 scripts/tournament.py run runs/tournament-new
 
 ## 文档与检查
 
+AI 设计/编码阶段可使用独立的总用时计时器。人类手动运行 `target/release/fff-timer`，LLM 运行 `target/release/fff-timer-query` 只查询一行 `HH:MM:SS`。计时器全局单例，终端支持大字与缩小回退，非终端静默计时；退出后重新归零，到达 `99:59:59` 保持上限。构建命令为 `cargo build --release -p fff-session-timer`；详见 [计时器说明](docs/timer.md)。
+
 | 文档 | 用途 |
 | --- | --- |
 | [AGENTS.md](AGENTS.md) | 编码代理协作约定 |
@@ -88,6 +90,7 @@ python3 scripts/tournament.py run runs/tournament-new
 | [回放](docs/replay.md) | 实际文件格式和重放/导出约定 |
 | [基准 AI](docs/benchmark-ai.md) | 策略、评测方法与限制 |
 | [自动测评机](docs/tournament.md) | 固定名单、均衡赛程、续跑与统计 |
+| [计时器](docs/timer.md) | 人类终端大字计时与 LLM 只读查询 |
 | [决策](docs/decisions.md) | 已接受设计与用户确认记录 |
 | [路线图](docs/roadmap.md) | 首版交付与后续工作 |
 

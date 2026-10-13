@@ -327,6 +327,20 @@ mod tests {
         second.stop();
     }
     #[test]
+    fn reused_pid_cannot_expose_an_old_origin_while_initializing() {
+        let temp = Temp::new();
+        let path = temp.state();
+        let mut holder = Holder::new(&path);
+        // Simulate a stale record whose PID happens to match the new process.
+        // This is test fixture setup, never an operation performed by query.
+        fs::write(&path, format!("FFF_TIMER_V1 {} 1\n", holder.child.id())).unwrap();
+        assert!(matches!(query_record(&path), Err(Error::NotReady)));
+        holder.publish();
+        assert!(query_record(&path).unwrap().start_ns > 1);
+        holder.stop();
+    }
+
+    #[test]
     fn querying_absent_timer_does_not_create_files() {
         let temp = Temp::new();
         let path = temp.state();

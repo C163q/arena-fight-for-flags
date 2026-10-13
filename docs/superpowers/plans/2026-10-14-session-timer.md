@@ -1,6 +1,6 @@
 # Session Timer Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 实现人类终端正向计时器与 LLM 一次性只读查询器。
 
@@ -33,9 +33,9 @@
 
 **Interfaces:** `clock::now_ns() -> Result<u64, Error>`、`clock::format_elapsed(start_ns, now_ns) -> Result<String, Error>`；`state::Session::acquire(path) -> Result<Session, Error>`、`Session::publish()`；`state::query_record(path) -> Result<Record, Error>`，Record 含 pid/start_ns。
 
-- [ ] 写测试并观察失败：计时边界、饱和；独立子进程持锁、重复启动拒绝、就绪/旧状态、只读不创建/不修改、退出/强杀释放、不覆盖未知格式/符号链接/FIFO/硬链接。
-- [ ] 实现 Linux 时钟、固定记录协议、文件安全打开/权限、POSIX 两段记录锁，查询前后校验。
-- [ ] `cargo test --offline -p fff-session-timer --lib` 全通过；提交。
+- [x] 写测试并观察失败：计时边界、饱和；独立子进程持锁、重复启动拒绝、就绪/旧状态、只读不创建/不修改、退出/强杀释放、不覆盖未知格式/符号链接/FIFO/硬链接。
+- [x] 实现 Linux 时钟、固定记录协议、文件安全打开/权限、POSIX 两段记录锁，查询前后校验。
+- [x] `cargo test --offline -p fff-session-timer --lib` 全通过；提交。
 
 ### Task 2: 大字终端与两个程序
 
@@ -43,19 +43,23 @@
 
 **Interfaces:** `display::frame(text, size, ansi) -> String` 纯布局；`Terminal::new/update/finish` 使用独立非阻塞终端描述符；公开 `timer_main()`、`query_main()` 供 bin 调用。
 
-- [ ] 先写渲染测试观察失败：大字完整、尺寸受限、小终端/未知尺寸/dumb 回退、缩放；实战验收脚本先写对两个 CLI 的行为要求。
-- [ ] 实现块状字形/居中/resize、非阻塞输出和信号退出，非终端静默，查询严格一行、拒绝控制参数。
-- [ ] `cargo test --offline -p fff-session-timer` 通过，release 构建两个程序；提交。
+- [x] 先写渲染测试观察失败：大字完整、尺寸受限、小终端/未知尺寸/dumb 回退、缩放；实战验收脚本先写对两个 CLI 的行为要求。
+- [x] 实现块状字形/居中/resize、非阻塞输出和信号退出，非终端静默，查询严格一行、拒绝控制参数。
+- [x] `cargo test --offline -p fff-session-timer` 通过，release 构建两个程序；提交。
 
 ### Task 3: 真实验收与文档
 
 **Files:** `tests/timer_integration.py`、`docs/timer.md`、README、AGENTS、architecture 与设计状态。
 
-- [ ] 真实 release 程序验证：不同目录竞争、时间前进、读取不改文件、退出/重启/强杀、拒绝参数、大/小/resize PTY、非 TTY 静默、关闭与堵塞显示、自然终端收尾。拒绝干扰既有计时器。
-- [ ] 全 workspace Rust 测试、fmt/clippy、Python 单测通过；保存实际验收结果。
-- [ ] 更新文档与状态并提交，记录测试证据。
+- [x] 真实 release 程序验证：不同目录竞争、时间前进、读取不改文件、退出/重启/强杀、拒绝参数、大/小/resize PTY、非 TTY 静默、关闭与堵塞显示、自然终端收尾。拒绝干扰既有计时器。
+- [x] 全 workspace Rust 测试、fmt/clippy、Python 单测通过；保存实际验收结果。
+- [x] 更新文档与状态并提交，记录测试证据。
 
 ## 完成流程
 
 - [ ] 对本次新增功能做一次独立审查，重要发现一次修复，补 RED→GREEN 回归，不重新审查。
 - [ ] 合并 main 并复验，正常清理本次工作区，确保没有遗留测试计时器。
+
+## 实施证据
+
+53 个 Rust workspace 测试（计时器 11 个）、29 个既有 Python 单测、fmt/clippy 通过。真实 release 验收 14 项通过，数据保存在根目录 `runs/timer-v1/acceptance-complete/acceptance.json`，耗时 4.51 秒；没有遗留运行中的计时器。大字抓取见该目录 ANSI 文件，纯文本预览为 `runs/timer-v1/preview.txt`。全局状态文件保留，查询返回未运行。

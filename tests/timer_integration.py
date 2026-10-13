@@ -91,6 +91,28 @@ def main():
             stdout,stderr=process.communicate(timeout=2);assert stdout==stderr==b''
         finally:cleanup(process)
     checks += ['SIGTERM/SIGINT/SIGKILL release singleton','restart starts at zero despite stale file']
+    # Start competing processes together; only the selected PID may stay live.
+    contenders=[subprocess.Popen([str(timer)],cwd=cwd,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+                for cwd in ('/tmp',str(REPO))]
+    try:
+        deadline=time.monotonic()+3
+        while time.monotonic()<deadline:
+            result=ask()
+            if result.returncode==0:
+                winner_pid=int(STATE.read_text().split()[1])
+                break
+            time.sleep(.005)
+        else:raise AssertionError('no contender became ready')
+        winner=next((p for p in contenders if p.pid==winner_pid),None)
+        assert winner is not None,'a timer outside this test acquired the singleton'
+        loser=next(p for p in contenders if p is not winner)
+        stdout,stderr=loser.communicate(timeout=2)
+        assert loser.returncode==1 and stdout==b'' and stderr
+        assert winner.poll() is None
+        stop(winner)
+        checks += ['simultaneous starts select exactly one winner']
+    finally:
+        for process in contenders:cleanup(process)
     def resize(fd,cols,rows):
         fcntl.ioctl(fd,termios.TIOCSWINSZ,struct.pack('HHHH',rows,cols,0,0))
     def receive(fd,period=.45):
@@ -109,7 +131,6 @@ def main():
     master,slave=pty.openpty();resize(slave,80,24)
     flags=fcntl.fcntl(slave,fcntl.F_GETFL)
     process=subprocess.Popen([str(timer)],stdout=slave,stderr=subprocess.PIPE,stdin=subprocess.DEVNULL,env={**os.environ,'TERM':'xterm-256color'})
-    closed=False
     try:
         ready(process);large=receive(master)
         assert '█'.encode() in large and b'\x1b[?1049h' in large
