@@ -256,6 +256,20 @@ class ReportingTests(PlanFixture):
         self.assertEqual(group['pairwise']['a']['b'],{'wins':0,'ties':3,'losses':0})
         self.assertEqual(group['pairwise']['a']['c'],{'wins':3,'ties':0,'losses':0})
 
+    def test_confidence_interval_preserves_correlated_rotation_blocks(self):
+        plan=self.make(repeats=5)
+        # Three whole blocks won by a, two whole blocks lost. Per-game
+        # resampling would incorrectly narrow this interval to about .3..9.
+        block_ids=[b['id'] for b in plan['blocks']]
+        scores=[]
+        for match in plan['matches']:
+            winner='a' if block_ids.index(match['block']) < 3 else 'b'
+            scores.append([20 if aid==winner else 0 for aid in match['slots']])
+        result=self.build(plan,self.results(plan,scores))
+        a=next(x for x in result['groups'][0]['standings'] if x['id']=='a')
+        self.assertEqual(a['rank_score'],0.6)
+        self.assertEqual(a['rank_score_ci95'],[0.2,1.0])
+
     def test_intervals_resample_blocks_and_exports_escape_names(self):
         plan=self.make(repeats=5)
         rows=self.results(plan,[[20,20]]*10)

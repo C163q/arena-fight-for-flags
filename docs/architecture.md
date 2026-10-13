@@ -42,6 +42,7 @@ Cargo workspace 与独立 Python 导出器：
 | `bots/wait/`、`bots/greedy/`、`bots/test-fixture/` | 等待、追旗与故障注入参考库 | 使用同一公开接口 |
 | `viewer/` | Python 导出器与通用 HTML/CSS/JS 播放器；内嵌 HTML 和拖放 JSON 共用代码 | 只消费回放格式，不依赖 AI 库 |
 | `maps/` | 固定地图、合法性检查输入 | 数据资产 |
+| `scripts/tournament.py`、`scripts/tournament_lib/` | 固定名单均衡赛程、串行执行/续跑和报告 | 只调用公开 runner/verify，消费原始记录，不修改规则 |
 | `docs/` | 本仓库设计、规则、接口与使用说明 | 文档 |
 
 ## 一回合的数据流

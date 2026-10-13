@@ -64,6 +64,18 @@ AI 可见全图、所有棋子位置/血量/携旗、当前旗帜、比分和复
 
 地图已调整为菱形出生环与稀疏障碍，所有出生位到最近旗点等距；仍有实战位置偏好，比较 AI 时轮换位置并跑多个种子。详见 [地图标定报告](docs/map-balance-2026-10-13.md) 和 [地图概览](docs/assets/maps-v2.svg)。独立进程提供超时/崩溃隔离，不是执行恶意本地库的完整安全沙箱。
 
+## 自动测评
+
+为每种人数指定一组 AI，测评机自动安排位置均衡、多种子对抗，串行执行并验证每场回放，支持中断续跑，输出 Markdown/CSV/JSON 报告。正式 8 人赛程每种子 56 场，均衡每个 AI 的出生位及任意两个 AI 的相对位置；快速模式每种子 8 场。
+
+```sh
+# 编辑示例中的 AI 库和各人数名单；plan 不启动 AI。
+python3 scripts/tournament.py plan --config config/tournament.example.json --out runs/tournament-new
+python3 scripts/tournament.py run runs/tournament-new
+```
+
+示例覆盖 2–8 人、每种人数 5 个种子，共 990 场；可用 `--mode quick --repeats 1` 先跑 35 场，或 `--only 8p` 只选择 8 人名单。查看输出目录 `report.md`；排名只使用完整换位组，不合并不同人数/名单。详见 [测评机说明](docs/tournament.md)。
+
 ## 文档与检查
 
 | 文档 | 用途 |
@@ -75,6 +87,7 @@ AI 可见全图、所有棋子位置/血量/携旗、当前旗帜、比分和复
 | [API](docs/api.md) | 已实现 C ABI v1 的字段与所有权 |
 | [回放](docs/replay.md) | 实际文件格式和重放/导出约定 |
 | [基准 AI](docs/benchmark-ai.md) | 策略、评测方法与限制 |
+| [自动测评机](docs/tournament.md) | 固定名单、均衡赛程、续跑与统计 |
 | [决策](docs/decisions.md) | 已接受设计与用户确认记录 |
 | [路线图](docs/roadmap.md) | 首版交付与后续工作 |
 
