@@ -205,16 +205,52 @@ impl Terminal {
         self.drain();
     }
     pub(crate) fn finish(&mut self) {
-        if let Some(file) = self.output.as_mut() {
+        if let Some(mut file) = self.output.take() {
             let text = if self.entered {
                 "\x1b[?25h\x1b[?1049l"
             } else {
                 "\n"
             };
-            let _ = file.write(text.as_bytes());
+            // Discard unfinished drawing, then give a temporarily full terminal
+            // a bounded opportunity to accept the complete restoration sequence.
+            let deadline = std::time::Instant::now() + std::time::Duration::from_millis(250);
+            let mut offset = 0;
+            while offset < text.len() && std::time::Instant::now() < deadline {
+                match file.write(&text.as_bytes()[offset..]) {
+                    Ok(0) => break,
+                    Ok(count) => offset += count,
+                    Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
+                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                        let remaining =
+                            deadline.saturating_duration_since(std::time::Instant::now());
+                        let timeout = remaining.as_millis().clamp(1, 250) as libc::c_int;
+                        let mut descriptor = libc::pollfd {
+                            fd: file.as_raw_fd(),
+                            events: libc::POLLOUT,
+                            revents: 0,
+                        };
+                        // SAFETY: descriptor is valid writable pollfd storage,
+                        // file keeps its fd alive, and the wait has a finite bound.
+                        let result = unsafe { libc::poll(&mut descriptor, 1, timeout) };
+                        if result < 0
+                            && std::io::Error::last_os_error().kind()
+                                != std::io::ErrorKind::Interrupted
+                        {
+                            break;
+                        }
+                        if descriptor.revents & (libc::POLLERR | libc::POLLHUP | libc::POLLNVAL)
+                            != 0
+                        {
+                            break;
+                        }
+                    }
+                    Err(_) => break,
+                }
+            }
         }
         self.entered = false;
-        self.output = None;
+        self.pending.clear();
+        self.offset = 0;
     }
 }
 impl Drop for Terminal {
@@ -226,6 +262,81 @@ impl Drop for Terminal {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn finish_restores_terminal_when_output_drains_after_a_short_stall() {
+        use std::{
+            io::Read,
+            os::fd::FromRawFd,
+            time::{Duration, Instant},
+        };
+        let (mut master, mut slave) = (-1, -1);
+        let size = libc::winsize {
+            ws_row: 1000,
+            ws_col: 2000,
+            ws_xpixel: 0,
+            ws_ypixel: 0,
+        };
+        // SAFETY: descriptor outputs and winsize are valid storage; optional
+        // name/termios pointers may be null. Successful descriptors are owned below.
+        assert_eq!(
+            unsafe {
+                libc::openpty(
+                    &mut master,
+                    &mut slave,
+                    std::ptr::null_mut(),
+                    std::ptr::null(),
+                    &size,
+                )
+            },
+            0
+        );
+        // SAFETY: openpty returned these distinct, uniquely owned descriptors.
+        let mut reader = unsafe { File::from_raw_fd(master) };
+        // SAFETY: slave is the other unique descriptor from openpty.
+        let output = unsafe { File::from_raw_fd(slave) };
+        // SAFETY: output owns this valid descriptor; these fcntl commands take
+        // no pointer and only change this test's independently created PTY.
+        let flags = unsafe { libc::fcntl(output.as_raw_fd(), libc::F_GETFL) };
+        assert!(flags >= 0);
+        // SAFETY: as above, setting the flags of our own valid descriptor.
+        assert_eq!(
+            unsafe { libc::fcntl(output.as_raw_fd(), libc::F_SETFL, flags | libc::O_NONBLOCK) },
+            0
+        );
+        let mut terminal = Terminal {
+            output: Some(output),
+            ansi: true,
+            entered: false,
+            pending: Vec::new(),
+            offset: 0,
+            last: None,
+        };
+        terminal.update("00:00:00");
+        let reading = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(50));
+            let mut captured = Vec::new();
+            let mut chunk = [0u8; 65536];
+            loop {
+                match reader.read(&mut chunk) {
+                    Ok(0) => break,
+                    Ok(count) => captured.extend_from_slice(&chunk[..count]),
+                    Err(error) if error.raw_os_error() == Some(libc::EIO) => break,
+                    Err(error) => panic!("PTY read failed: {error}"),
+                }
+            }
+            captured
+        });
+        let started = Instant::now();
+        terminal.finish();
+        assert!(started.elapsed() < Duration::from_secs(1));
+        let captured = reading.join().unwrap();
+        assert!(captured.windows(8).any(|part| part == b"\x1b[?1049h"));
+        assert!(
+            captured.ends_with(b"\x1b[?25h\x1b[?1049l"),
+            "missing complete cursor/screen restoration after temporary backpressure"
+        );
+    }
+
     #[test]
     fn large_clock_has_complete_scaled_glyphs_that_fit() {
         let rows = raster("12:34:56", Size { cols: 41, rows: 9 }).unwrap();
