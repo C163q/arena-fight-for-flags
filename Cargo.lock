@@ -12,6 +12,50 @@ dependencies = [
 ]
 
 [[package]]
+name = "fff-ai-abi"
+version = "0.1.0"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "fff-ai-sdk"
+version = "0.1.0"
+dependencies = [
+ "fff-ai-abi",
+]
+
+[[package]]
+name = "fff-bot-baseline"
+version = "0.1.0"
+dependencies = [
+ "fff-ai-abi",
+ "fff-ai-sdk",
+]
+
+[[package]]
+name = "fff-bot-greedy"
+version = "0.1.0"
+dependencies = [
+ "fff-ai-abi",
+ "fff-ai-sdk",
+]
+
+[[package]]
+name = "fff-bot-test-fixture"
+version = "0.1.0"
+dependencies = [
+ "fff-ai-abi",
+]
+
+[[package]]
+name = "fff-bot-wait"
+version = "0.1.0"
+dependencies = [
+ "fff-ai-abi",
+]
+
+[[package]]
 name = "fff-engine"
 version = "0.1.0"
 dependencies = [

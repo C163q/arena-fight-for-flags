@@ -1,0 +1,8 @@
+[package]
+name = "fff-ai-sdk"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+fff-ai-abi = { path = "../ai-abi" }

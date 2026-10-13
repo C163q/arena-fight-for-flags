@@ -1,0 +1,12 @@
+[package]
+name = "fff-bot-baseline"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+fff-ai-abi = { path = "../../crates/ai-abi" }
+fff-ai-sdk = { path = "../../crates/ai-sdk" }
