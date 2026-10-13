@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/engine", "crates/ai-abi", "crates/ai-sdk", "bots/wait", "bots/greedy", "bots/baseline", "bots/test-fixture"]
+members = ["crates/engine", "crates/ai-worker", "crates/runner", "crates/ai-abi", "crates/ai-sdk", "bots/wait", "bots/greedy", "bots/baseline", "bots/test-fixture"]
 resolver = "3"
 
 [workspace.package]

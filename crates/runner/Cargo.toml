@@ -1,0 +1,11 @@
+[package]
+name = "fff-runner"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+fff-engine = { path = "../engine" }
+fff-ai-worker = { path = "../ai-worker" }
+serde_json.workspace = true
+sha2.workspace = true

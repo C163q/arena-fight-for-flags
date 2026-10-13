@@ -1,0 +1,13 @@
+[package]
+name = "fff-ai-worker"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+fff-engine = { path = "../engine" }
+fff-ai-abi = { path = "../ai-abi" }
+serde.workspace = true
+serde_json.workspace = true
+libloading.workspace = true
+libc.workspace = true
