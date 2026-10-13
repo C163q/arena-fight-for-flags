@@ -192,5 +192,84 @@ class ExecutionTests(PlanFixture):
         self.assertEqual(len(list((self.root/'matches').glob('*/attempt-*'))),1)
 
 
+try:
+    from tournament_lib.reporting import build_results, write_reports
+except ImportError:
+    build_results = write_reports = None
+
+
+class ReportingTests(PlanFixture):
+    def results(self, plan, scores):
+        rows=[]
+        for match, values in zip(plan['matches'], scores):
+            top=max(values)
+            rows.append({'match_id':match['id'],'group':match['group'],'block':match['block'],
+                         'slots':match['slots'],'directory':'matches/test',
+                         'summary':{'complete':True,'turns':30,'scores':values,'outcome':{'reason':'target_score','winners':[i for i,v in enumerate(values) if v==top]},
+                                    'ai_failures':[0]*len(values),'illegal_actions':[0]*len(values)},
+                         'call_stats':[{'calls':30,'timeouts':0,'statuses':{'ok':30},'elapsed_histogram':{'10':29,'100':1}} for _ in values],
+                         'wall_seconds':1.0})
+        return rows
+
+    def build(self, plan, rows):
+        self.assertIsNotNone(build_results,'tournament statistics are missing')
+        return build_results(plan,rows)
+
+    def test_partial_blocks_do_not_enter_standings(self):
+        plan=self.make(repeats=1)
+        result=self.build(plan,self.results(plan,[[20,0]]))
+        group=result['groups'][0]
+        self.assertEqual(group['complete_blocks'],0)
+        self.assertEqual(group['standings'],[])
+        self.assertEqual(group['verified_matches'],1)
+        self.assertEqual(group['ranked_matches'],0)
+
+    def test_tied_scores_do_not_become_losses_or_arbitrary_winner(self):
+        plan=self.make(repeats=1)
+        rows=self.results(plan,[[20,20],[20,20]])
+        rows[0]['summary']['ai_failures'][0]=1
+        rows[0]['call_stats'][0]['timeouts']=1
+        rows[0]['summary']['illegal_actions'][1]=2
+        standings=self.build(plan,rows)['groups'][0]['standings']
+        self.assertEqual([s['id'] for s in standings],['a','b'])
+        for item in standings:
+            self.assertEqual((item['rank'],item['rank_score'],item['mean_rank']),(1,0.5,1.5))
+            self.assertEqual((item['sole_wins'],item['joint_firsts'],item['first_credit']),(0,2,0.5))
+            self.assertIsNone(item['rank_score_ci95'])
+            self.assertEqual(item['elapsed_us']['p99'],100)
+            self.assertEqual({s['matches'] for s in item['by_slot']},{1})
+        fault_ai=rows[0]['slots'][0]
+        self.assertEqual(next(s for s in standings if s['id']==fault_ai)['ai_failures'],1)
+        self.assertEqual(next(s for s in standings if s['id']==fault_ai)['timeouts'],1)
+
+    def test_multiplayer_midrank_and_pairwise_scores(self):
+        cfg=copy.deepcopy(self.config)
+        cfg['ais'].append({'id':'c','library':'shared.so'})
+        cfg['lineups'][0].update(players=3,ais=['a','b','c'])
+        plan=self.make(cfg,repeats=1,mode='quick')
+        rows=self.results(plan,[[20 if a in ('a','b') else 5 for a in m['slots']] for m in plan['matches']])
+        group=self.build(plan,rows)['groups'][0]
+        a,b,c=group['standings']
+        self.assertEqual([x['id'] for x in (a,b,c)],['a','b','c'])
+        self.assertEqual((a['rank_score'],a['mean_rank'],a['first_credit']),(0.75,1.5,0.5))
+        self.assertEqual((b['rank'],c['rank'],c['rank_score'],c['mean_score_difference']),(1,3,0,-15))
+        self.assertEqual(group['pairwise']['a']['b'],{'wins':0,'ties':3,'losses':0})
+        self.assertEqual(group['pairwise']['a']['c'],{'wins':3,'ties':0,'losses':0})
+
+    def test_intervals_resample_blocks_and_exports_escape_names(self):
+        plan=self.make(repeats=5)
+        rows=self.results(plan,[[20,20]]*10)
+        result=self.build(plan,rows)
+        self.assertEqual(result['groups'][0]['standings'][0]['rank_score_ci95'],[0.5,0.5])
+        self.assertIsNotNone(write_reports)
+        write_reports(self.root,plan,rows)
+        import csv
+        with (self.root/'standings.csv').open(newline='') as stream:
+            csv_rows=list(csv.DictReader(stream))
+        self.assertEqual(csv_rows[0]['name'],'甲|AI')
+        self.assertIn('甲\\|AI',(self.root/'report.md').read_text())
+        self.assertEqual(json.loads((self.root/'results.json').read_text())['completed_matches'],10)
+
+
 if __name__ == '__main__':
     unittest.main()

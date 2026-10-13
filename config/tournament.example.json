@@ -1,0 +1,134 @@
+{
+  "version": 1,
+  "runner": "../target/release/fff-runner",
+  "mode": "balanced",
+  "repeats": 5,
+  "ais": [
+    {
+      "id": "baseline",
+      "name": "基准 AI",
+      "library": "../target/release/libfff_bot_baseline.so"
+    },
+    {
+      "id": "greedy_1",
+      "name": "贪心 AI 副本 1",
+      "library": "../target/release/libfff_bot_greedy.so"
+    },
+    {
+      "id": "greedy_2",
+      "name": "贪心 AI 副本 2",
+      "library": "../target/release/libfff_bot_greedy.so"
+    },
+    {
+      "id": "greedy_3",
+      "name": "贪心 AI 副本 3",
+      "library": "../target/release/libfff_bot_greedy.so"
+    },
+    {
+      "id": "greedy_4",
+      "name": "贪心 AI 副本 4",
+      "library": "../target/release/libfff_bot_greedy.so"
+    },
+    {
+      "id": "greedy_5",
+      "name": "贪心 AI 副本 5",
+      "library": "../target/release/libfff_bot_greedy.so"
+    },
+    {
+      "id": "greedy_6",
+      "name": "贪心 AI 副本 6",
+      "library": "../target/release/libfff_bot_greedy.so"
+    },
+    {
+      "id": "greedy_7",
+      "name": "贪心 AI 副本 7",
+      "library": "../target/release/libfff_bot_greedy.so"
+    }
+  ],
+  "lineups": [
+    {
+      "id": "2p",
+      "players": 2,
+      "map": "../maps/arena_2p.ron",
+      "ais": [
+        "baseline",
+        "greedy_1"
+      ]
+    },
+    {
+      "id": "3p",
+      "players": 3,
+      "map": "../maps/arena_3p.ron",
+      "ais": [
+        "baseline",
+        "greedy_1",
+        "greedy_2"
+      ]
+    },
+    {
+      "id": "4p",
+      "players": 4,
+      "map": "../maps/arena_4p.ron",
+      "ais": [
+        "baseline",
+        "greedy_1",
+        "greedy_2",
+        "greedy_3"
+      ]
+    },
+    {
+      "id": "5p",
+      "players": 5,
+      "map": "../maps/arena_5p.ron",
+      "ais": [
+        "baseline",
+        "greedy_1",
+        "greedy_2",
+        "greedy_3",
+        "greedy_4"
+      ]
+    },
+    {
+      "id": "6p",
+      "players": 6,
+      "map": "../maps/arena_6p.ron",
+      "ais": [
+        "baseline",
+        "greedy_1",
+        "greedy_2",
+        "greedy_3",
+        "greedy_4",
+        "greedy_5"
+      ]
+    },
+    {
+      "id": "7p",
+      "players": 7,
+      "map": "../maps/arena_7p.ron",
+      "ais": [
+        "baseline",
+        "greedy_1",
+        "greedy_2",
+        "greedy_3",
+        "greedy_4",
+        "greedy_5",
+        "greedy_6"
+      ]
+    },
+    {
+      "id": "8p",
+      "players": 8,
+      "map": "../maps/arena_8p.ron",
+      "ais": [
+        "baseline",
+        "greedy_1",
+        "greedy_2",
+        "greedy_3",
+        "greedy_4",
+        "greedy_5",
+        "greedy_6",
+        "greedy_7"
+      ]
+    }
+  ]
+}
