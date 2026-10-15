@@ -30,6 +30,8 @@
 | [设计决策](design/decisions.md) | 已接受的方案及用户确认来源 |
 | [交付状态与路线图](design/roadmap.md) | 交付情况和后续方向 |
 
+当前修复：[计时查询 PID 命名空间兼容](design/specs/2026-10-15-timer-pidns-design.md)，[实施计划](plans/2026-10-15-timer-pidns.md)。
+
 已完成功能的设计稿保存在 `design/specs/`，当前使用方式和实际边界以指南、参考规范为准：
 
 - [首回合预算与地图 v3](design/specs/2026-10-15-arena-v3-design.md)：首回合预算、旗点运输距离与标定。
