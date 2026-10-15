@@ -72,6 +72,6 @@
 
 自动测评机见 [说明](docs/guides/tournament.md)。修改赛程或统计时运行 Python 单测；执行器变更额外运行 `tests/tournament_integration.py` 真实验收，进程/锁变更运行 `tests/tournament_parent_cleanup.py`。保持独立种子流、整场串行和完整重复块才排名；不能用损坏记录或不完整换位组生成正式名次，不把 AI 故障误作测评基础设施故障，续跑不信任统计缓存。
 
-总用时计时器见 [说明](docs/guides/timer.md)：人类手动启动 `fff-timer`，LLM 仅使用 `fff-timer-query` 读取。查询器不获取/释放锁、不写状态、不发控制信号；不得加入启动、停止、暂停、重置、改路径或预设时间的入口。正式路径固定在共享 `/tmp`，不能以环境变量绕开单例；不要删除运行中实例的状态 inode。修改时验证 Rust 单测及 `tests/timer_integration.py`，只清理测试自己启动的进程，不能干扰人类既有计时器。
+总用时计时器见 [说明](docs/guides/timer.md)：人类手动启动 `fff-timer`，LLM 仅使用 `fff-timer-query` 读取。查询器不获取/释放锁、不写状态、不发控制信号；不得加入启动、停止、暂停、重置、改路径或预设时间的入口。正式路径固定在共享 `/tmp`，不能以环境变量绕开单例；兼容 PID 命名空间时以锁存在和稳定发布记录校验会话，不比较记录 PID 与命名空间相对锁 PID；内外仍须共享状态 inode 与时钟基准；不要删除运行中实例的状态 inode。修改时验证 Rust 单测及 `tests/timer_integration.py`，只清理测试自己启动的进程，不能干扰人类既有计时器。
 
 参赛题包见 [说明](docs/guides/contest-kit.md)。仅使用显式文件白名单和独立参赛文档模板，不将仓库源码或内部 docs 复制进 tarball；游戏程序与基准只发 release 二进制，接入材料只提供 C 头文件和完整接口文档。LLM 60/70 分钟要求同时出现在外层和内层 README，计时由场外人员控制。修改后验证 `tests/test_contest_package.py` 和仓库外 `tests/contest_package_integration.py`；产物放在忽略的 `dist/`，不提交二进制。

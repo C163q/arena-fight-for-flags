@@ -61,6 +61,7 @@ fn owner(file: &File, start: i64) -> Result<Option<i32>, Error> {
     if unsafe { libc::fcntl(file.as_raw_fd(), libc::F_GETLK, &mut value) } == -1 {
         return Err(std::io::Error::last_os_error().into());
     }
+    // A lock held outside our PID namespace is present even when l_pid is 0.
     Ok((value.l_type != libc::F_UNLCK as libc::c_short).then_some(value.l_pid))
 }
 fn bytes(file: &mut File) -> Result<Vec<u8>, Error> {
@@ -168,11 +169,11 @@ pub(crate) fn query_record(path: &Path) -> Result<Record, Error> {
     if first != second {
         return Err(Error::NotReady);
     }
-    let record = parse(&first)?;
-    if record.pid != first_owner {
-        return Err(Error::NotReady);
-    }
-    Ok(record)
+    // The record PID belongs to the publisher's namespace; F_GETLK translates
+    // its owner into the reader's namespace (possibly 0). They are not identity
+    // values that can be compared. The initialization lock protects publication,
+    // and the checks above require a live lock and an unchanged complete record.
+    parse(&first)
 }
 
 #[cfg(test)]
@@ -216,7 +217,15 @@ mod tests {
     }
     impl Holder {
         fn new(path: &Path) -> Self {
-            let mut child = Command::new(std::env::current_exe().unwrap())
+            Self::spawn(path, false)
+        }
+        fn spawn(path: &Path, in_namespace: bool) -> Self {
+            let mut command = if in_namespace {
+                namespace_command()
+            } else {
+                Command::new(std::env::current_exe().unwrap())
+            };
+            let mut child = command
                 .args(["--exact", "state::tests::holder_child", "--nocapture"])
                 .env("FFF_TIMER_UNIT_STATE", path)
                 .stdin(Stdio::piped())
@@ -275,6 +284,146 @@ mod tests {
                 _ => panic!("unknown test command"),
             }
         }
+    }
+    fn namespace_command() -> Command {
+        let mut command = Command::new("unshare");
+        command
+            .args([
+                "--user",
+                "--map-root-user",
+                "--pid",
+                "--fork",
+                "--mount-proc",
+                "--kill-child=KILL",
+            ])
+            .arg(std::env::current_exe().unwrap());
+        command
+    }
+    fn can_create_namespace() -> bool {
+        let output = Command::new("unshare")
+            .args([
+                "--user",
+                "--map-root-user",
+                "--pid",
+                "--fork",
+                "--mount-proc",
+                "true",
+            ])
+            .output();
+        match output {
+            Ok(output) if output.status.success() => true,
+            Ok(output)
+                if String::from_utf8_lossy(&output.stderr).contains("Operation not permitted")
+                    || String::from_utf8_lossy(&output.stderr).contains("Permission denied") =>
+            {
+                eprintln!(
+                    "SKIP PID namespace regression: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                );
+                false
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                eprintln!("SKIP PID namespace regression: {error}");
+                false
+            }
+            other => panic!("unexpected namespace probe failure: {other:?}"),
+        }
+    }
+    #[test]
+    fn namespace_query_child() {
+        let Some(path) = std::env::var_os("FFF_TIMER_UNIT_QUERY_STATE") else {
+            return;
+        };
+        let path = Path::new(&path);
+        let file = File::open(path).unwrap();
+        assert_eq!(
+            owner(&file, 0).unwrap(),
+            Some(0),
+            "ancestor lock must be present with invisible PID"
+        );
+        assert!(query_record(path).unwrap().start_ns > 0);
+    }
+    #[test]
+    fn child_namespace_can_query_a_live_ancestor_lock() {
+        if !can_create_namespace() {
+            return;
+        }
+        let temp = Temp::new();
+        let path = temp.state();
+        let mut holder = Holder::new(&path);
+        holder.publish();
+        let before = fs::read(&path).unwrap();
+        let meta = fs::metadata(&path).unwrap();
+        let output = namespace_command()
+            .args([
+                "--exact",
+                "state::tests::namespace_query_child",
+                "--nocapture",
+            ])
+            .env("FFF_TIMER_UNIT_QUERY_STATE", &path)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert_eq!(fs::read(&path).unwrap(), before);
+        assert_eq!(
+            fs::metadata(&path).unwrap().modified().unwrap(),
+            meta.modified().unwrap()
+        );
+        assert!(matches!(
+            Session::acquire(&path),
+            Err(Error::AlreadyRunning)
+        ));
+        holder.stop();
+        assert!(matches!(query_record(&path), Err(Error::NotRunning)));
+        println!("PASS: real child namespace query, l_pid=0, read-only and singleton preserved");
+    }
+    #[test]
+    fn ancestor_can_query_a_live_child_with_remapped_positive_pid() {
+        if !can_create_namespace() {
+            return;
+        }
+        let temp = Temp::new();
+        let path = temp.state();
+        let mut holder = Holder::spawn(&path, true);
+        assert!(matches!(query_record(&path), Err(Error::NotReady)));
+        holder.publish();
+        let mut file = File::open(&path).unwrap();
+        let recorded = parse(&bytes(&mut file).unwrap()).unwrap();
+        let mapped = owner(&file, 0).unwrap().unwrap();
+        assert!(mapped > 0 && mapped != recorded.pid);
+        assert_eq!(query_record(&path).unwrap(), recorded);
+        holder.stop();
+        assert!(matches!(query_record(&path), Err(Error::NotRunning)));
+        println!(
+            "PASS: real ancestor namespace query, remapped positive PID and stale-state rejection"
+        );
+    }
+    #[test]
+    fn published_record_pid_is_diagnostic_not_a_lock_identity() {
+        let temp = Temp::new();
+        let path = temp.state();
+        let mut holder = Holder::new(&path);
+        holder.publish();
+        let record = query_record(&path).unwrap();
+        // The same valid record can contain the holder's PID as seen from
+        // another namespace. This fixture covers the policy even when the
+        // test environment forbids creating a real namespace.
+        fs::write(&path, format!("FFF_TIMER_V1 1 {}\n", record.start_ns)).unwrap();
+        let actual = query_record(&path).unwrap();
+        assert_eq!(
+            actual,
+            Record {
+                pid: 1,
+                start_ns: record.start_ns
+            }
+        );
+        holder.stop();
+        assert!(matches!(query_record(&path), Err(Error::NotRunning)));
     }
     #[test]
     fn only_one_process_can_start_and_query_is_read_only() {

@@ -22,6 +22,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--bin-dir',type=Path,default=REPO/'target/release')
     parser.add_argument('--out',type=Path,required=True)
+    parser.add_argument('--pid-namespace',action='store_true',help='require a real unshare PID-namespace query check')
     args=parser.parse_args()
     bins,out=args.bin_dir.resolve(),args.out.resolve()
     timer,query=bins/'fff-timer',bins/'fff-timer-query'
@@ -69,6 +70,15 @@ def main():
         for bad in ([str(query),'--stop'],[str(query),'--path','/tmp/another-timer'],[str(timer),'--reset']):
             rejected=subprocess.run(bad,capture_output=True,text=True,timeout=2)
             assert rejected.returncode==2 and rejected.stdout==''
+        if args.pid_namespace:
+            # Real child namespace: the live external lock is visible but its
+            # owner PID is 0. No product arguments or test path override needed.
+            isolated=subprocess.run(['unshare','--user','--map-root-user','--pid','--fork','--mount-proc',
+                                     str(query)],capture_output=True,text=True,timeout=3)
+            assert isolated.returncode==0,(isolated.returncode,isolated.stderr)
+            assert re.fullmatch(r'\d{2}:\d{2}:\d{2}\n',isolated.stdout),repr(isolated.stdout)
+            assert quiet.poll() is None and ask().returncode==0
+            checks += ['real PID namespace query of host timer']
         # Independent query keeps advancing while timer has no event-loop CPU.
         quiet.send_signal(signal.SIGSTOP)
         before_time=seconds(value());time.sleep(1.15)
