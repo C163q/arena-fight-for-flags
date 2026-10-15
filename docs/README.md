@@ -57,6 +57,7 @@
 
 记录独立审查发现、修复、回归证据与审查范围：
 
+- [参赛题包审查](reviews/contest-kit-review-2026-10-15.md)
 - [首版独立审查](reviews/review-2026-10-13.md)
 - [自动测评机审查](reviews/tournament-review-2026-10-13.md)
 - [计时器审查](reviews/timer-review-2026-10-14.md)

@@ -1,7 +1,9 @@
 """Artifact tests catch accidental source disclosure and unusable package layouts."""
 import hashlib
-import importlib.util
 import json
+import os
+import subprocess
+from unittest.mock import patch
 from pathlib import Path
 import shutil
 import sys
@@ -117,6 +119,54 @@ class ContestPackageTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'ELF'):
             self.assemble()
         self.assertFalse(self.out.exists())
+
+    def test_target_rustflags_cannot_reenable_debug_or_disable_stripping(self):
+        # Exercise real Cargo/rustc, not a mock of flag ordering.
+        members = ('runner', 'worker', 'baseline', 'timer')
+        (self.root / 'Cargo.toml').write_text('[workspace]\nmembers = ["runner","worker","baseline","timer"]\nresolver="3"\n')
+        packages = ('fff-runner', 'fff-ai-worker', 'fff-bot-baseline', 'fff-session-timer')
+        for member, name in zip(members, packages):
+            directory = self.root / member
+            directory.mkdir()
+            text = f'[package]\nname="{name}"\nversion="0.1.0"\nedition="2024"\n'
+            if member == 'baseline':
+                text += '[lib]\ncrate-type=["cdylib"]\npath="lib.rs"\n'
+                (directory / 'lib.rs').write_text('\n'.join(f'#[unsafe(no_mangle)] pub extern "C" fn {symbol}()->u32{{1}}' for symbol in ('ctf_abi_version','ctf_create','ctf_decide','ctf_destroy')))
+            elif member == 'timer':
+                for binary in ('fff-timer', 'fff-timer-query'):
+                    text += f'[[bin]]\nname="{binary}"\npath="{binary}.rs"\n'
+                    (directory / f'{binary}.rs').write_text('fn main() {}\n')
+            else:
+                text += '[[bin]]\nname="' + name + '"\npath="main.rs"\n'
+                (directory / 'main.rs').write_text('fn main() {}\n')
+            (directory / 'Cargo.toml').write_text(text)
+        subprocess.run(['git', 'init', '-q', str(self.root)], check=True)
+        subprocess.run(['git', '-C', str(self.root), '-c', 'user.name=Fixture', '-c',
+                        'user.email=fixture@example.invalid', 'commit', '-q', '--allow-empty', '-m', 'fixture'], check=True)
+        subprocess.run(['cargo', 'generate-lockfile', '--offline'], cwd=self.root, check=True)
+        (self.root / '.cargo').mkdir()
+        (self.root / '.cargo/config.toml').write_text(
+            '[target.x86_64-unknown-linux-gnu]\nrustflags=["-C","debuginfo=2","-C","strip=none","-C","opt-level=0"]\n')
+        with patch.dict(os.environ, {'CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS':
+                                    '-C debuginfo=2 -C strip=none -C opt-level=0'}):
+            artifacts, info = package.build_release(self.root)
+        sections = subprocess.check_output(['readelf', '-S', str(artifacts / 'fff-runner')], text=True)
+        self.assertNotIn('.debug_info', sections)
+        self.assertNotIn('.symtab', sections)
+        self.assertEqual(info['profile'], 'release')
+
+    def test_debug_elf_is_rejected_before_publication(self):
+        self.assertTrue(hasattr(package, 'validate_release_artifacts'), 'missing release artifact verification')
+        source = self.parent / 'debug.c'
+        source.write_text('int main(void){return 0;}\n')
+        subprocess.run(['cc', '-g', str(source), '-o', str(self.artifacts / 'fff-runner')], check=True)
+        with self.assertRaisesRegex(ValueError, 'debug|unstripped'):
+            package.validate_release_artifacts(self.artifacts)
+
+    def test_missing_baseline_abi_exports_are_rejected(self):
+        self.assertTrue(hasattr(package, 'validate_release_artifacts'), 'missing release artifact verification')
+        with self.assertRaisesRegex(ValueError, 'ABI'):
+            package.validate_release_artifacts(self.artifacts)
 
     def test_wrong_build_profile_or_target_is_rejected(self):
         for key, value in [('profile', 'debug'), ('target', 'aarch64-unknown-linux-gnu')]:

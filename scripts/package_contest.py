@@ -50,6 +50,25 @@ def copy_file(source, destination, executable=False):
     destination.chmod(0o755 if executable else 0o644)
 
 
+def validate_release_artifacts(artifacts):
+    for name in (*BINARIES, 'fff-timer', 'libfff_bot_baseline.so'):
+        path = checked_file(artifacts, name)
+        check_elf(path)
+        sections = subprocess.check_output(['readelf', '--wide', '--sections', str(path)], text=True)
+        if any(section in sections for section in ('.debug_', '.zdebug_', '.symtab')):
+            raise ValueError(f'debug/unstripped ELF is not allowed: {path}')
+    symbols = subprocess.check_output(
+        ['readelf', '--wide', '--dyn-syms', str(artifacts / 'libfff_bot_baseline.so')], text=True)
+    exports = set()
+    for line in symbols.splitlines():
+        fields = line.split()
+        if len(fields) == 8 and fields[3] == 'FUNC' and fields[4] in ('GLOBAL', 'WEAK') and fields[6] != 'UND':
+            exports.add(fields[7])
+    required = {'ctf_abi_version', 'ctf_create', 'ctf_decide', 'ctf_destroy'}
+    if not required.issubset(exports):
+        raise ValueError(f'baseline ABI exports missing: {sorted(required - exports)}')
+
+
 def tournament_config():
     ais = [{'id': 'candidate', 'name': '我的 AI', 'library': '../submission/libteam.so'}]
     ais += [{'id': f'baseline_{i}', 'name': f'基准 {i}', 'library': '../lib/libfff_bot_baseline.so'} for i in range(1, 8)]
@@ -139,6 +158,9 @@ def build_release(root):
     # A separate cache and explicit Cargo options prevent accidentally shipping stale/debug artifacts.
     for name in ('RUSTFLAGS', 'CARGO_ENCODED_RUSTFLAGS', 'CARGO_BUILD_RUSTFLAGS'):
         env.pop(name, None)
+    # Highest-priority encoded flags also override target-specific environment/config rustflags.
+    env['CARGO_ENCODED_RUSTFLAGS'] = '\x1f'.join([
+        '-C', 'opt-level=3', '-C', 'debuginfo=0', '-C', 'strip=symbols', '-C', 'debug-assertions=off'])
     target_dir = root / 'target/contest-build'
     env['CARGO_TARGET_DIR'] = str(target_dir)
     command = ['cargo', 'build', '--locked', '--release', '--target', TARGET,
@@ -147,6 +169,7 @@ def build_release(root):
                '--config', 'profile.release.strip="symbols"', '--config', 'profile.release.debug-assertions=false']
     subprocess.run(command, cwd=root, env=env, check=True)
     artifacts = target_dir / TARGET / 'release'
+    validate_release_artifacts(artifacts)
     glibc_versions = set()
     for name in (*BINARIES, 'fff-timer', 'libfff_bot_baseline.so'):
         result = subprocess.run(['readelf', '--version-info', str(artifacts / name)], capture_output=True, text=True, check=True)

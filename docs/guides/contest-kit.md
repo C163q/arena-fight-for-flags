@@ -14,6 +14,8 @@ python3 scripts/package_contest.py --out dist/contest-kit-new
 
 需要 Linux x86_64 GNU/glibc、Rust/Cargo 工具链和 GNU readelf。默认输出 `dist/contest-kit/`，目录已存在时拒绝覆盖。正常入口总是执行 `cargo build --locked --release`，选择裁判、worker、基准 AI、计时器这四个包，显式使用 GNU x86_64 目标、优化级别 3、关闭调试信息及 debug assertions、去除可移除符号。
 
+编译设置使用受控的最高优先级 rustflags，覆盖外部目标平台参数；构建后检查实际 ELF 不含调试节/普通符号表，基准库保留四个 ABI 导出。
+
 构建缓存独立位于 `target/contest-build/`，不从现有普通 `target/release/` 拿旧文件。打包失败只清理本次暂存文件，不删除既有输出。默认的 `dist/` 与构建缓存由 Git 忽略；自定义输出建议仍放在 `dist/` 下，或仓库外，避免误提交二进制。
 
 ```text
