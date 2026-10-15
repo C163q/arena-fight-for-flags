@@ -5,9 +5,16 @@ use fff_engine::*;
 pub use host::TeamHost;
 use serde::{Deserialize, Serialize};
 
+pub const REGULAR_DECISION_BUDGET_US: u32 = 50_000;
+pub const FIRST_TURN_DECISION_BUDGET_US: u32 = 250_000;
+
 /// Budget depends on the match turn, never the worker's restart count.
 pub fn decision_budget_us(turn: u32) -> u32 {
-    if turn == 1 { 250_000 } else { 50_000 }
+    if turn == 1 {
+        FIRST_TURN_DECISION_BUDGET_US
+    } else {
+        REGULAR_DECISION_BUDGET_US
+    }
 }
 
 pub const TIME_POLICY: &str = "serial; match turn 1: 250000us, subsequent turns: 50000us per request including IPC and validation; queued time excluded; restarts do not reset first-turn allowance; init 1000ms; exit 100ms";
@@ -38,7 +45,7 @@ pub fn initialization(map: &MapDefinition, config: &Config, team: u32, seed: u64
         first_turn: 1,
         restart_count: 0,
         seed,
-        decision_budget_us: decision_budget_us(2),
+        decision_budget_us: REGULAR_DECISION_BUDGET_US,
         initial_flag_count: ((map.flag_points.len() + 1) / 3).max(1) as u32,
         max_hp: 3,
         shot_damage: 1,

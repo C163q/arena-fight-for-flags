@@ -29,6 +29,31 @@ def recommend_limits(rows):
     return limits
 
 
+def calibration_action_counts(summary, records):
+    """After Rust verify, distinguish new death drops from illegal submissions."""
+    if any(summary['ai_failures']):
+        raise ValueError('AI fault; investigate before calibration')
+    dynamic = [0] * len(summary['illegal_actions'])
+    for record in records:
+        frame = record['frame']
+        ground = {(f['location']['position']['x'], f['location']['position']['y'])
+                  for f in frame['start']['flags'] if f['location']['state'] == 'ground'}
+        for event in frame['events']:
+            validation = event.get('validation', 'ok')
+            if validation == 'ok':
+                continue
+            target = event.get('target', {})
+            if (event['type'] != 'move' or validation != 'carrying_cannot_enter_flag'
+                    or (target.get('x'), target.get('y')) in ground):
+                raise ValueError(f'illegal submitted action: {validation}')
+            # In an engine-verified move phase, a ground flag absent at START
+            # can only have appeared through this turn's shooting/death drops.
+            dynamic[event['unit']['team_id']] += 1
+    if dynamic != summary['illegal_actions']:
+        raise ValueError('invalid-action counts differ from verified events')
+    return dynamic
+
+
 def sha(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
@@ -97,7 +122,8 @@ def main():
             assert loaded['match_limits']['target_score'] == 20, loaded['match_limits']
             geometry[str(players)] = metrics(loaded)
             counts, elapsed = Counter(), []
-            for frame in (directory / 'frames').glob('*.json'):
+            frame_files = sorted((directory / 'frames').glob('*.json'))
+            for frame in frame_files:
                 record = json.loads(frame.read_text())
                 counts.update(e['type'] for e in record['frame']['events'])
                 elapsed.extend(c['elapsed_us'] for c in record['calls'])
@@ -105,8 +131,8 @@ def main():
             row = {'players': players, 'seed': seed, 'summary': summary, 'events': dict(counts),
                    'p99_elapsed_us': elapsed[(len(elapsed) - 1) * 99 // 100] if elapsed else 0,
                    'source_map_sha256': sha(original), 'played_map_sha256': sha(played_map), 'directory': str(directory)}
-            if any(summary['ai_failures']) or any(summary['illegal_actions']):
-                raise ValueError(f'{directory}: AI fault/invalid actions; investigate before calibration')
+            row['dynamic_flag_blocked_moves'] = calibration_action_counts(
+                summary, (json.loads(frame.read_text()) for frame in frame_files))
             rows.append(row)
             payload = {'environment': meta, 'geometry': geometry, 'matches': rows}
             temporary = args.out / 'report.tmp'

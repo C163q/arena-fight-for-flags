@@ -32,7 +32,7 @@
 
 已完成功能的设计稿保存在 `design/specs/`，当前使用方式和实际边界以指南、参考规范为准：
 
-- [首回合预算与地图 v3](design/specs/2026-10-15-arena-v3-design.md)：已确认方案，实施中。
+- [首回合预算与地图 v3](design/specs/2026-10-15-arena-v3-design.md)：首回合预算、旗点运输距离与标定。
 
 - [播放器改进](design/specs/2026-10-13-viewer-usability-design.md)
 - [地图与数值标定](design/specs/2026-10-13-map-balance-design.md)
@@ -69,9 +69,11 @@
 报告结论仅适用于记录中的地图、AI、配置和样本；原始对局数据保留在本地 `runs/`，不随文档迁移。
 
 - [基准 AI 首版实测](reports/evaluation-2026-10-13.md)：旧地图上的对照结果。
-- [地图 v2 与 20 分终局标定](reports/map-balance-2026-10-13.md)：当前默认地图的标定与位置偏好。
+- [地图 v2 与 20 分终局标定](reports/map-balance-2026-10-13.md)：历史地图的标定与位置偏好。
+- [首回合预算与地图 v3 实测](reports/arena-v3-2026-10-15.md)：当前默认地图、49 场自战和位置偏好。
 - [参赛题包验收](reports/contest-kit-2026-10-15.md)：独立编译、对战、自测与回放验收。
-- [七张地图概览](assets/maps-v2.svg)：报告和参考文档共用的图示。
+- [地图 v3 概览](assets/maps-v3.svg)：当前默认七图。
+- [地图 v2 概览](assets/maps-v2.svg)：历史布局。
 
 ## 文档维护
 

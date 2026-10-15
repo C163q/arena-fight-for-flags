@@ -4,6 +4,9 @@ use fff_engine::*;
 use fff_replay::*;
 use std::path::{Path, PathBuf};
 fn record(name: &str, complete: bool) -> PathBuf {
+    record_timed(name, complete, [100; 3])
+}
+fn record_timed(name: &str, complete: bool, elapsed: [u64; 3]) -> PathBuf {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let mut map = MapDefinition::load(&root.join("maps/arena_2p.ron")).unwrap();
     map.match_limits.max_turns = 3;
@@ -34,7 +37,11 @@ fn record(name: &str, complete: bool) -> PathBuf {
                 team_id: team,
                 turn,
                 status: if team == 0 { "timeout" } else { "ok" }.into(),
-                elapsed_us: if team == 0 { 50_100 } else { 100 },
+                elapsed_us: if team == 0 {
+                    50_100
+                } else {
+                    elapsed[(turn - 1) as usize]
+                },
                 init_elapsed_us: 0,
                 restart_count: 0,
                 actions: [Action::Wait; 3],
@@ -127,6 +134,39 @@ fn successful_calls_reject_missing_or_inconsistent_raw_abi_outputs() {
             verify_directory(&path).is_err(),
             "accepted tampered raw output: {kind}"
         );
+        std::fs::remove_dir_all(path).unwrap();
+    }
+}
+
+#[test]
+fn replay_verifies_first_turn_allowance_and_preserves_legacy_limits() {
+    // Prevent both rejecting new legal records and widening the limits of old
+    // records. Recorder generates ASCII from the same actual call metadata.
+    let legacy =
+        "serial; 50000us per request including IPC; queued time excluded; init 1000ms; exit 100ms";
+    for (name, elapsed, policy, valid) in [
+        ("budget-first", [250_000, 50_000, 50_000], None, true),
+        ("budget-first-over", [250_001, 100, 100], None, false),
+        ("budget-later-over", [100, 50_001, 100], None, false),
+        ("budget-legacy", [50_000; 3], Some(legacy), true),
+        (
+            "budget-legacy-over",
+            [100_000, 100, 100],
+            Some(legacy),
+            false,
+        ),
+        ("budget-unknown", [100; 3], Some("unknown"), false),
+    ] {
+        let path = record_timed(name, true, elapsed);
+        if let Some(policy) = policy {
+            let file = path.join("manifest.json");
+            let mut manifest: serde_json::Value =
+                serde_json::from_slice(&std::fs::read(&file).unwrap()).unwrap();
+            manifest["time_policy"] = policy.into();
+            std::fs::write(file, serde_json::to_vec(&manifest).unwrap()).unwrap();
+        }
+        let result = verify_directory(&path);
+        assert_eq!(result.is_ok(), valid, "{name}: {result:?}");
         std::fs::remove_dir_all(path).unwrap();
     }
 }

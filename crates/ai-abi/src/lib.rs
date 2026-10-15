@@ -28,6 +28,8 @@ pub struct CtfInit {
     pub first_turn: u32,
     pub restart_count: u32,
     pub seed: u64,
+    /// Regular-turn budget. Match observation turn 1 allows 250000us;
+    /// worker restarts do not grant another first-turn allowance.
     pub decision_budget_us: u32,
     pub initial_flag_count: u32,
     pub max_hp: u32,

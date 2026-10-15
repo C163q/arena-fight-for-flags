@@ -37,6 +37,13 @@ pub fn verify_directory(path: &Path) -> Result<(), String> {
     if !["in_progress", "complete"].contains(&manifest.status.as_str()) {
         return Err("invalid recording status".into());
     }
+    let first_turn_allowance = match manifest.time_policy.as_str() {
+        fff_ai_worker::TIME_POLICY => true,
+        "serial; 50000us per request including IPC; queued time excluded; init 1000ms; exit 100ms" => {
+            false
+        }
+        _ => return Err("unsupported replay time policy".into()),
+    };
     let map: MapDefinition = decode(&root, "map.json")?;
     map.validate()?;
     let mut ron: MapDefinition =
@@ -102,8 +109,13 @@ pub fn verify_directory(path: &Path) -> Result<(), String> {
                     return Err(format!("{file}: failed AI must wait"));
                 }
             } else {
-                if call.elapsed_us > 50_000 {
-                    return Err(format!("{file}: accepted response exceeded 50ms"));
+                let budget = if first_turn_allowance {
+                    fff_ai_worker::decision_budget_us(turn)
+                } else {
+                    fff_ai_worker::REGULAR_DECISION_BUDGET_US
+                };
+                if call.elapsed_us > u64::from(budget) {
+                    return Err(format!("{file}: accepted response exceeded {budget}us"));
                 }
                 let raw = call
                     .raw_output

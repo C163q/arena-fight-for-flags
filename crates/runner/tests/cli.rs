@@ -15,10 +15,11 @@ fn match_uses_ron_limits_and_rejects_unknown_overrides_or_wrong_team_count() {
     let library = dir.join("wait.so");
     std::fs::write(&source,r#"
 #include "ctf_ai.h"
+#include <unistd.h>
 static uint64_t seen_seed;
 uint32_t ctf_abi_version(void){return 1;}
 int32_t ctf_create(const CtfInit *i,void **c){seen_seed=i->seed;*c=0;return 0;}
-int32_t ctf_decide(void *c,const CtfObservation *o,CtfTeamAction *a){(void)c;(void)o;a->abi_version=1;a->struct_size=sizeof(*a);for(uint32_t i=0;i<3;i++){a->actions[i]=(CtfAction){.unit_id=i,.target_x=(int32_t)(seen_seed&0x7fffffffu)};}return 0;}
+int32_t ctf_decide(void *c,const CtfObservation *o,CtfTeamAction *a){(void)c;if(o->turn==1)usleep(100000);a->abi_version=1;a->struct_size=sizeof(*a);for(uint32_t i=0;i<3;i++){a->actions[i]=(CtfAction){.unit_id=i,.target_x=(int32_t)(seen_seed&0x7fffffffu)};}return 0;}
 void ctf_destroy(void *c){(void)c;}
 "#).unwrap();
     assert!(
@@ -56,6 +57,17 @@ void ctf_destroy(void *c){(void)c;}
     assert_eq!(summary["turns"], 2);
     assert_eq!(summary["scores"], serde_json::json!([0, 0]));
     assert_eq!(summary["ai_failures"], serde_json::json!([0, 0]));
+    // Real 100ms first-turn responses must survive recording and verification.
+    let first: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(dir.join("match/frames/000001.json")).unwrap())
+            .unwrap();
+    assert!(
+        first["calls"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|c| c["elapsed_us"].as_u64().unwrap() >= 100_000)
+    );
     assert!(dir.join("match/frames/000002.json").is_file());
     assert!(dir.join("match/frames/000002.txt").is_file());
     let verified = Command::new(env!("CARGO_BIN_EXE_fff-runner"))
