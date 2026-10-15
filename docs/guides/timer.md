@@ -41,7 +41,7 @@ cargo build --release -p fff-session-timer
 
 计时器持有 POSIX 独占记录锁，起点发布前另有初始化锁区间。正常退出、崩溃或 SIGKILL 由内核释放锁；状态文件保留但不代表仍在运行。重启只在拿到锁后写入新的起点，不删除或替换 inode；不要手动删除运行中计时器的状态文件。
 
-查询器只读打开文件，用 `F_GETLK` 查询锁和就绪状态，不获取/释放锁、不修改内容、不发信号，也不向计时器事件循环发请求。前后检查锁持有者、初始化锁与两次完整记录的一致性，切换期间有限重试；不能得到稳定值时返回非零，不把旧起点或残留 PID 当成当前计时。
+查询器只读打开文件，用 `F_GETLK` 查询锁和就绪状态，不获取/释放锁、不修改内容、不发信号，也不向计时器事件循环发请求。在单次锁查询返回的完整区间中确认已发布状态（仅锁住字节 0），拒绝仍覆盖初始化字节 1 的锁；前后检查持有者、初始化状态与两次完整记录的一致性，切换期间有限重试；不能得到稳定值时返回非零，不把旧起点或残留 PID 当成当前计时。
 
 PID 命名空间隔离不影响共享 inode 上的锁是否存在，但 `F_GETLK.l_pid` 可能为 0 或映射后的其他正数。记录中的 PID 仅作诊断，不能与查询方看到的锁 PID 比较。新查询器保持原三字段状态格式，可查询未重启的旧版计时器；旧查询器仍有这一兼容问题。
 
@@ -58,6 +58,8 @@ cargo test -p fff-session-timer
 python3 tests/timer_integration.py --out runs/timer-check-new
 # 宿主支持 unshare 用户/PID 命名空间时，强制验证沙箱查询：
 python3 tests/timer_integration.py --out runs/timer-pidns-new --pid-namespace
+# 确定性交替失败初始化竞态，只使用私有临时状态文件：
+python3 tests/timer_publication_race.py
 ```
 
 Rust 单测另包含两个方向的真实 PID 命名空间查询；无法创建命名空间时会明确输出 SKIP，不能把它当作已覆盖。上述 `--pid-namespace` 验收要求环境支持，失败会报错而不静默跳过。

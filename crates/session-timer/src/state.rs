@@ -61,6 +61,19 @@ fn owner(file: &File, start: i64) -> Result<Option<i32>, Error> {
     if unsafe { libc::fcntl(file.as_raw_fd(), libc::F_GETLK, &mut value) } == -1 {
         return Err(std::io::Error::last_os_error().into());
     }
+    // Linux returns the complete conflicting lock range in this same snapshot.
+    // Before publication our lock is [0,2); afterwards it is exactly [0,1).
+    // Separate byte-0/byte-1 probes alone could combine different failed
+    // initializers when both owners are invisible (l_pid=0). Reject the init
+    // range atomically, even if its process exits before our next syscall.
+    if start == 0
+        && value.l_type != libc::F_UNLCK as libc::c_short
+        && (value.l_type != libc::F_WRLCK as libc::c_short
+            || value.l_start != 0
+            || value.l_len != 1)
+    {
+        return Err(Error::NotReady);
+    }
     // A lock held outside our PID namespace is present even when l_pid is 0.
     Ok((value.l_type != libc::F_UNLCK as libc::c_short).then_some(value.l_pid))
 }

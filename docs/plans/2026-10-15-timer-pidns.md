@@ -41,5 +41,5 @@
 **Interfaces:** 原白名单打包入口、新 release 输出目录和仓库外验收。
 
 - [ ] 同步共享 inode/时钟边界，生成新题包并进行仓库外完整验收。
-- [ ] 完整 Rust/Python 检查、一次 fresh-context 独立审查，修复 Critical/Important 并保留证据。
+- [x] 完整 Rust/Python 检查、一次 fresh-context 独立审查，修复 Critical/Important 并保留证据。
 - [ ] 记录实际检查与兼容限制，本地提交合并，清理自己隔离工作区；生成最终题包。
