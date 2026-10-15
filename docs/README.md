@@ -74,6 +74,7 @@
 - [基准 AI 首版实测](reports/evaluation-2026-10-13.md)：旧地图上的对照结果。
 - [地图 v2 与 20 分终局标定](reports/map-balance-2026-10-13.md)：历史地图的标定与位置偏好。
 - [首回合预算与地图 v3 实测](reports/arena-v3-2026-10-15.md)：当前默认地图、49 场自战和位置偏好。
+- [计时查询 PID 命名空间修复实测](reports/timer-pidns-2026-10-15.md)：真实沙箱、旧计时器兼容和完整进程验收。
 - [参赛题包验收](reports/contest-kit-2026-10-15.md)：独立编译、对战、自测与回放验收。
 - [地图 v3 概览](assets/maps-v3.svg)：当前默认七图。
 - [地图 v2 概览](assets/maps-v2.svg)：历史布局。

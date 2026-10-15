@@ -30,9 +30,9 @@
 
 **Interfaces:** `query_record(path: &Path) -> Result<Record, Error>` 保持；`Record.pid` 只作诊断。
 
-- [ ] 写稳定异 PID 记录回归与真实命名空间查询测试，观察旧 PID 比较导致失败。
-- [ ] 移除无效相等假设，保留锁/初始化/双读/格式校验；测试 GREEN。
-- [ ] 完整 Rust、fmt、clippy、`tests/timer_integration.py` 和实际沙箱只读查询验收；同步文档并提交。
+- [x] 写稳定异 PID 记录回归与真实命名空间查询测试，观察旧 PID 比较导致失败。
+- [x] 移除无效相等假设，保留锁/初始化/双读/格式校验；测试 GREEN。
+- [x] 完整 Rust、fmt、clippy、`tests/timer_integration.py` 和实际沙箱只读查询验收；同步文档并提交。
 
 ### Task 2: 题包与独立审查交付
 
