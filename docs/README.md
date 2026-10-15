@@ -38,7 +38,7 @@
 
 待确认的设计：
 
-- [AI 参赛题包](design/specs/2026-10-15-contest-kit-design.md)：外层组织者材料、内层参赛内容与披露边界。
+- [参赛题包](design/specs/2026-10-15-contest-kit-design.md)：外层组织者材料、内层参赛内容、LLM 时限与披露边界。
 
 ## 实施计划 `plans/`
 
