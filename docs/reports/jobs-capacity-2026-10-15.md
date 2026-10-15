@@ -69,3 +69,15 @@ python3 scripts/benchmark_jobs.py --out runs/capacity-new --bin-dir target/relea
 ```
 
 仓库外验收 `/tmp/fff-contest-jobs-capacity-check/`：15命令、4场真实比赛、31文件、10内部文档链接全部通过；包括C/Rust独立绑定、混合续跑并行标记与回放导出。约8.914秒，不启动计时器。结果复制到 `runs/tournament-jobs/capacity-package-acceptance.json`。全部45项Python、8项播放器测试，以及161个仓库本地文档链接通过。
+
+## 参赛文案修订
+
+用户指出开发机硬件、探针方法和详细容量档位不适合参赛题面。新版题包移除这些细节；选手仅看到从jobs=2起步、可尝试不超过可用CPU核数一半、按超时调整，以及默认/正式jobs=1。内部实测数据仍保留在本报告，题包维护指南同步这一披露边界。
+
+修订产物 `dist/contest-kit-v3-parallel-clean/`，由干净提交 `ae2997a` 构建，替代上节题包作为当前分发版本。SHA-256：
+
+```text
+6227b0f786fb80fdc9fb879be46953320ea33aecba6aaa0b39cd68353bec5dec
+```
+
+11项题包单测通过；仓库外 `/tmp/fff-contest-docs-clean-check/` 验收15个命令、4场真实比赛通过（约8.909秒），未启动计时器。检查实际压缩包的参赛README/自测指南，确认保留并发操作说明与正式jobs=1，已移除上述实验细节。原始验收复制到 `runs/tournament-jobs/docs-clean-package-acceptance.json`。本次仅文档调整，不重复容量或规则测试。
