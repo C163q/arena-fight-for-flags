@@ -1,5 +1,7 @@
 """Capacity decisions must retain both repeats and stop at first failing level."""
 import sys
+import subprocess
+import tempfile
 from pathlib import Path
 import unittest
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
@@ -33,3 +35,20 @@ class CapacityTests(unittest.TestCase):
         rows=self.rows()
         next(r for r in rows if r['profile']=='cpu35' and r['pass']==1 and r['jobs']==1)['faults']=1
         self.assertIsNone(assess_capacity(rows,[1,2,4,8],2)['measured_max_jobs'])
+
+    def test_jobs_cannot_exceed_the_sixteen_match_probe_group(self):
+        self.assertIsNotNone(assess_capacity)
+        rows=self.rows()
+        for row in rows:
+            if row['jobs']==8: row['jobs']=32
+        with self.assertRaisesRegex(ValueError,'16'):
+            assess_capacity(rows,[1,2,4,32],2)
+
+    def test_cli_rejects_untestable_jobs_before_creating_output(self):
+        with tempfile.TemporaryDirectory() as temp:
+            out=Path(temp)/'must-not-be-created'
+            script=Path(__file__).resolve().parents[1]/'scripts/benchmark_jobs.py'
+            result=subprocess.run([sys.executable,str(script),'--out',str(out),'--jobs','1','32'],capture_output=True,text=True)
+            self.assertEqual(result.returncode,2)
+            self.assertIn('16',result.stderr)
+            self.assertFalse(out.exists())

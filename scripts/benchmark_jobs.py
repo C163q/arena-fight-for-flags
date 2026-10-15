@@ -16,6 +16,8 @@ ROOT=Path(__file__).resolve().parents[1]
 
 
 def assess_capacity(rows, levels, passes):
+    if not levels or levels[0]!=1 or any(type(j) is not int or not 1<=j<=16 for j in levels):
+        raise ValueError('probe jobs must include 1 and stay within 1..16 matches')
     indexed={(r['profile'],r['pass'],r['jobs']):r for r in rows}
     expected={(profile,p,j) for profile in ('baseline','cpu35') for p in range(passes) for j in levels}
     if len(indexed)!=len(rows) or set(indexed)!=expected:
@@ -79,8 +81,8 @@ def main():
     parser.add_argument('--turns',type=int,default=24)
     args=parser.parse_args()
     levels=sorted(set(args.jobs))
-    if not levels or levels[0]!=1 or args.passes<1 or args.turns<2:
-        parser.error('include jobs 1; positive passes and turns >=2 required')
+    if not levels or levels[0]!=1 or any(j>16 for j in levels) or args.passes<1 or args.turns<2:
+        parser.error('include jobs 1, limited to 1..16 matches; positive passes and turns >=2 required')
     out,bins=args.out.resolve(),args.bin_dir.resolve()
     out.mkdir(parents=True,exist_ok=False)
     before=machine()
