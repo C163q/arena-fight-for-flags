@@ -32,6 +32,8 @@
 
 已完成功能的设计稿保存在 `design/specs/`，当前使用方式和实际边界以指南、参考规范为准：
 
+- [首回合预算与地图 v3](design/specs/2026-10-15-arena-v3-design.md)：已确认方案，实施中。
+
 - [播放器改进](design/specs/2026-10-13-viewer-usability-design.md)
 - [地图与数值标定](design/specs/2026-10-13-map-balance-design.md)
 - [自动测评机](design/specs/2026-10-13-tournament-design.md)
@@ -42,6 +44,8 @@
 ## 实施计划 `plans/`
 
 以下计划均已完成，保留任务拆分、验收要求和实施证据：
+
+当前实施：[首回合预算与地图 v3](plans/2026-10-15-arena-v3.md)。
 
 - [首个可运行版本](plans/2026-10-13-playable-v1.md)
 - [播放器改进](plans/2026-10-13-viewer-usability.md)
