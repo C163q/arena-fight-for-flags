@@ -25,9 +25,16 @@ int32_t ctf_decide(void *ctx,const CtfObservation *obs,CtfTeamAction *out){
  uint32_t *p=ctx;(void)obs;
  if(p[0]==1||(p[0]==5&&p[1]==0)){for(;;){}}
  if(p[0]==2){abort();}
+ if(p[0]==9||p[0]==10){
+  if(obs->turn==1){usleep(p[0]==9?100000:350000);}
+  if(obs->turn==2){usleep(100000);}
+ }
  if(p[0]==7){pthread_t t;pthread_create(&t,NULL,busy,NULL);}
  out->abi_version=1;out->struct_size=sizeof(*out);
  for(uint32_t i=0;i<3;i++){out->actions[i]=(CtfAction){.unit_id=i,.kind=CTF_WAIT};}
+ if(p[0]==9||p[0]==10){
+  out->actions[0]=(CtfAction){.unit_id=0,.kind=CTF_MOVE,.direction=CTF_RIGHT};
+ }
  if(p[0]==3){out->actions[2].unit_id=99;}
  if(p[0]==8){out->actions[0].kind=999;}
  return 0;
@@ -102,5 +109,56 @@ fn actual_c_libraries_are_isolated_timed_restarted_and_paused() {
         report.actions[0],
         Action::Invalid { kind_code: 999, .. }
     ));
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
+fn first_match_turn_has_extra_time_but_restarts_do_not() {
+    // A 50ms first-turn deadline loses the first move; a per-process grace
+    // period incorrectly accepts the 100ms call after a timeout and restart.
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let dir = std::env::temp_dir().join(format!("fff-budget-test-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let library = compile(&root, &dir, "budget", 1);
+    let map = MapDefinition::load(&root.join("maps/arena_2p.ron")).unwrap();
+    let config = Config::default();
+    let mut engine = Engine::new(map.clone(), config.clone(), 4).unwrap();
+    let mut state = engine.begin_turn().unwrap();
+    let worker = Path::new(env!("CARGO_BIN_EXE_fff-ai-worker"));
+    let mut host = TeamHost::new(worker, &library, initialization(&map, &config, 0, 9));
+    let report = host.decide(&state, &map);
+    assert_eq!(report.status, "ok", "{:?}", report.error);
+    assert_eq!(
+        report.actions[0],
+        Action::Move {
+            direction: Direction::Right
+        }
+    );
+    assert!(report.elapsed_us >= 100_000);
+    state.turn = 2;
+    let report = host.decide(&state, &map);
+    assert_eq!(report.status, "timeout");
+    assert_eq!(report.actions, [Action::Wait; 3]);
+    assert!(host.pid().is_none());
+    state.turn = 3;
+    let report = host.decide(&state, &map);
+    assert_eq!(report.status, "ok");
+    assert_eq!(report.restart_count, 1);
+    drop(host);
+
+    let mut host = TeamHost::new(worker, &library, initialization(&map, &config, 0, 10));
+    state.turn = 1;
+    let report = host.decide(&state, &map);
+    assert_eq!(report.status, "timeout");
+    assert!(report.elapsed_us >= 250_000);
+    assert_eq!(report.actions, [Action::Wait; 3]);
+    state.turn = 2;
+    let report = host.decide(&state, &map);
+    assert_eq!(report.status, "timeout", "restart must not get 250ms");
+    assert_eq!(report.restart_count, 1);
+    assert_eq!(report.actions, [Action::Wait; 3]);
+    state.turn = 3;
+    assert_eq!(host.decide(&state, &map).status, "ok");
+    drop(host);
     std::fs::remove_dir_all(dir).unwrap();
 }

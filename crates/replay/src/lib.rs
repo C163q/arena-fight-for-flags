@@ -95,7 +95,27 @@ impl Recorder {
             .duration_since(std::time::UNIX_EPOCH)
             .map_err(|e| e.to_string())?
             .as_micros();
-        let manifest=Manifest{format_version:1,match_id:format!("match-{seed}-{stamp}"),engine_version:env!("CARGO_PKG_VERSION").into(),rules_version:RULES_VERSION.into(),rng_version:fff_engine::rng::RNG_VERSION.into(),seed,config:config.clone(),map_id:map.id.clone(),teams,status:"in_progress".into(),last_complete_turn:0,time_policy:"serial; 50000us per request including IPC; queued time excluded; init 1000ms; exit 100ms".into(),platform:format!("{}-{}",std::env::consts::OS,std::env::consts::ARCH),build_profile:if cfg!(debug_assertions){"debug"}else{"release"}.into()};
+        let manifest = Manifest {
+            format_version: 1,
+            match_id: format!("match-{seed}-{stamp}"),
+            engine_version: env!("CARGO_PKG_VERSION").into(),
+            rules_version: RULES_VERSION.into(),
+            rng_version: fff_engine::rng::RNG_VERSION.into(),
+            seed,
+            config: config.clone(),
+            map_id: map.id.clone(),
+            teams,
+            status: "in_progress".into(),
+            last_complete_turn: 0,
+            time_policy: fff_ai_worker::TIME_POLICY.into(),
+            platform: format!("{}-{}", std::env::consts::OS, std::env::consts::ARCH),
+            build_profile: if cfg!(debug_assertions) {
+                "debug"
+            } else {
+                "release"
+            }
+            .into(),
+        };
         let recorder = Self {
             path: path.into(),
             map: map.clone(),

@@ -27,7 +27,7 @@ void ctf_destroy(void *context);
 | `flag_respawn_min_turns`, `flag_respawn_max_turns` | 本场生成等待范围，默认 5、15，两端包含、整数均匀随机 |
 | `first_turn`, `restart_count` | 本次初始化将服务的回合、此前启动失败/重启次数 |
 | `seed` | 己方独立 64 位种子，默认来自 OS 随机源；由 `--ai-seed` 可显式指定，不从引擎种子派生 |
-| `decision_budget_us` | 50000 |
+| `decision_budget_us` | 常规回合预算 50000µs；比赛第 1 回合例外为 250000µs，按 `CtfObservation.turn == 1` 判断 |
 | `initial_flag_count` | `max(1,(N+1)/3)`，整数除法 |
 | `max_hp`, `shot_damage`, `shot_range` | 3、1、5；射程度量固定为曼哈顿 |
 | `respawn_absent_turns` | 10，死亡 t 后在 t+11 开始复活 |
@@ -65,9 +65,9 @@ void ctf_destroy(void *context);
 
 射击/移动的最终合法性归引擎。射击后死亡取消移动，记录 `killed_before_move`，不把合法提交算成非法动作。射击掉旗可能使携旗者的目标格变为非法，记录 `carrying_cannot_enter_flag`；这种动态结果不能仅凭 AI 开始观测预先判定。
 
-## 50ms 与执行隔离
+## 决策预算与执行隔离
 
-队伍依次调用，各自窗口从恢复/派发到完整响应校验，包含 IPC、调度与 JSON 编解码；等待其他队伍不扣预算。初始化/重启限 1000ms，退出限 100ms，worker 地址空间限 256MiB。调用窗口外暂停进程组，上一队故障清理完成才切换。
+比赛第 1 回合预算 250ms，第 2 回合起 50ms；`first_turn` 只是本次进程服务起点，不重置首回合额度。队伍依次调用，各自窗口从恢复/派发到完整响应校验，包含 IPC、调度与 JSON 编解码；等待其他队伍不扣预算。初始化/重启限 1000ms，退出限 100ms，worker 地址空间限 256MiB。调用窗口外暂停进程组，上一队故障清理完成才切换。
 
 超时强制终止对应组，本轮整队等待，下一轮冷启动；context 丢失，restart_count 增加。后台计算不得延续到函数返回之后。此机制提供运行隔离，不是恶意本地代码沙箱；系统其他进程仍可能影响墙钟结果。
 

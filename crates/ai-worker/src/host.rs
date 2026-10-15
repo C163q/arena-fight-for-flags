@@ -191,7 +191,7 @@ impl TeamHost {
         let id = self.request_id;
         let p = self.process.as_mut().expect("initialized worker");
         let at = Instant::now();
-        let deadline = at + Duration::from_millis(50);
+        let deadline = at + Duration::from_micros(decision_budget_us(snapshot.turn).into());
         let response = signal(p.child.id(), libc::SIGCONT)
             .and_then(|()| {
                 protocol::send(

@@ -24,6 +24,9 @@ typedef struct {
     uint32_t max_turns, target_score, flag_respawn_min_turns, flag_respawn_max_turns;
     uint32_t first_turn, restart_count;
     uint64_t seed;
+    /* decision_budget_us is the regular-turn budget (50000us).
+     * Match observation.turn == 1 allows 250000us; restarts do not reset it.
+     * first_turn is this worker's first served turn, not a new grace period. */
     uint32_t decision_budget_us, initial_flag_count, max_hp, shot_damage, shot_range, respawn_absent_turns;
 } CtfInit;
 typedef struct {uint32_t unit_id, kind, direction; int32_t target_x, target_y;} CtfAction;

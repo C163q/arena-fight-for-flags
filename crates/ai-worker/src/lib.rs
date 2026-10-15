@@ -4,6 +4,13 @@ use fff_ai_abi::*;
 use fff_engine::*;
 pub use host::TeamHost;
 use serde::{Deserialize, Serialize};
+
+/// Budget depends on the match turn, never the worker's restart count.
+pub fn decision_budget_us(turn: u32) -> u32 {
+    if turn == 1 { 250_000 } else { 50_000 }
+}
+
+pub const TIME_POLICY: &str = "serial; match turn 1: 250000us, subsequent turns: 50000us per request including IPC and validation; queued time excluded; restarts do not reset first-turn allowance; init 1000ms; exit 100ms";
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CallReport {
     pub team_id: u32,
@@ -31,7 +38,7 @@ pub fn initialization(map: &MapDefinition, config: &Config, team: u32, seed: u64
         first_turn: 1,
         restart_count: 0,
         seed,
-        decision_budget_us: 50_000,
+        decision_budget_us: decision_budget_us(2),
         initial_flag_count: ((map.flag_points.len() + 1) / 3).max(1) as u32,
         max_hp: 3,
         shot_damage: 1,
