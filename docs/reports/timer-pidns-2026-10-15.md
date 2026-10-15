@@ -52,3 +52,16 @@ python3 tests/timer_integration.py --out runs/timer-check-new --pid-namespace
 原先预览题包仅用于首次检查，**不是最终交付**；最终题包在原子并发修复后重新构建。
 
 原子并发修复后重新执行 release 计时器验收：15 项全部通过，用时 4.743 秒，无测试实例残留；证据 `runs/timer-pidns/timer-acceptance-fixed/acceptance.json`。确定性竞态、60 项 Rust、43 项 Python、fmt 和 clippy 均通过。审查范围与修复记录见 [独立审查](../reviews/timer-pidns-review-2026-10-15.md)。
+
+
+## 最终交付
+
+修复已本地合并到 main，游戏规则、地图和 C ABI 没有变更。`target/release/fff-timer-query` 已更新。旧版运行中的计时器可继续运行，外部参赛工作目录中的旧查询器需要由场外人员替换，不会自动更新；没有改动这些外部目录。
+
+最终题包位于 `dist/contest-kit-v3-timer-fixed/`，从干净提交 `23160f3` release 构建，平台 Linux x86_64 GNU、glibc≥2.39。原有题包保留。tarball SHA-256：`b57e1536dea7823d2890d683d96ecb74ac2ce41bc8e43d5155959d16767efb31`。
+
+仓库外验收 `/tmp/fff-timer-pidns-package-final/`：31 文件、9 内部链接、15 项命令与 4 场真实对战全部通过，用时 7.952 秒。独立 C/Rust 编译、自测续跑、回放验证/导出均通过。原始摘要另存 `runs/timer-pidns/package-acceptance-final.json`。
+
+最终题包里的查询器还在实际工具沙箱中对照旧版计时器执行：旧查询器 exit=2，新查询器 exit=0、输出 `00:00:10`；锁持有者 PID=0，状态内容和 mtime 不变，旧计时器兼容，测试自己的实例结束并清理。证据 `runs/timer-pidns/codex-sandbox-final/acceptance.json`，同目录保留专用驱动。
+
+main 合并后再次通过 Rust 60 项、Python 43 项、fmt/clippy 与真实命名空间初始化竞态回归。审查与执行日志保留在 `runs/timer-pidns/verification/`，合并检查日志为 `runs/timer-pidns/merged-*.log`。无遗留审查问题，无远端推送或发布。
