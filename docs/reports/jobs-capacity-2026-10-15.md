@@ -57,3 +57,15 @@ python3 scripts/benchmark_jobs.py --out runs/capacity-new --bin-dir target/relea
 一次方法审查另记录自动机器快照只包含cpuinfo首段的限制：本次以外部完整lscpu附件补全，不宣称脚本已自动采集完整拓扑。审查及处理见[容量审查](../reviews/jobs-capacity-review-2026-10-15.md)。
 
 参赛者在本机有明显计算余量时可从8并发自测，接近50ms预算、存在其他负载或在其他机器上时降低并发并先测少量局；未知环境从2开始。需考虑有效CPU配额/亲和性、异构核、内存、磁盘、策略自身计算量和长赛程热状态。最终在低负载jobs=1复核。
+
+## 最终参赛题包
+
+`dist/contest-kit-v3-parallel-capacity/` 由干净提交 `9595631` 构建；后续交付记录仅内部文档。两层README与自测文档写入开发机日期/硬件、建议8/实测最高10及适用限制，正式与默认仍1。压缩包31个白名单文件，未加入测量脚本或探针源码/二进制。Linux x86_64 GNU release，最低glibc2.39。
+
+压缩包SHA-256：
+
+```text
+99d59ca367529883f547f7e0bdb9708efd7c9b9626fddb600c161d5ae830e18d
+```
+
+仓库外验收 `/tmp/fff-contest-jobs-capacity-check/`：15命令、4场真实比赛、31文件、10内部文档链接全部通过；包括C/Rust独立绑定、混合续跑并行标记与回放导出。约8.914秒，不启动计时器。结果复制到 `runs/tournament-jobs/capacity-package-acceptance.json`。全部45项Python、8项播放器测试，以及161个仓库本地文档链接通过。
