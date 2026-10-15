@@ -13,13 +13,14 @@ from tournament_lib.storage import locked
 def live(pid):
     try:
         return Path(f'/proc/{pid}/stat').read_text().rsplit(')',1)[1].split()[0] not in ('Z','X')
-    except FileNotFoundError:
+    except (FileNotFoundError,ProcessLookupError):
         return False
 
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--out',type=Path,required=True)
+    parser.add_argument('--jobs',type=int,default=1,choices=[1,2])
     parser.add_argument('--bin-dir',type=Path,default=REPO/'target/release')
     args=parser.parse_args()
     out,bins=args.out.resolve(),args.bin_dir.resolve()
@@ -34,34 +35,37 @@ def main():
     root=out/'tournament'
     invoke('plan','--config',config,'--out',root)
     with (out/'kill.stdout.log').open('w') as stdout,(out/'kill.stderr.log').open('w') as stderr:
-        parent=subprocess.Popen([sys.executable,str(CLI),'run',str(root),'--max-matches','1'],stdout=stdout,stderr=stderr)
+        parent=subprocess.Popen([sys.executable,str(CLI),'run',str(root),'--max-matches',str(args.jobs),'--jobs',str(args.jobs)],stdout=stdout,stderr=stderr)
         children=[]
         try:
             deadline=time.monotonic()+10
             while time.monotonic()<deadline:
                 manifests=list((root/'matches').glob('*/attempt-000/match/manifest.json'))
-                if manifests and load(manifests[0]).get('status')=='in_progress':
-                    children=[int(p) for p in Path(f'/proc/{parent.pid}/task/{parent.pid}/children').read_text().split()]
-                    if children:
+                if len(manifests)==args.jobs and all(load(p).get('status')=='in_progress' for p in manifests):
+                    children=[]
+                    for path in Path(f'/proc/{parent.pid}/task').glob('*/children'):
+                        children.extend(int(p) for p in path.read_text().split())
+                    if len(children)==args.jobs:
                         break
                 if parent.poll() is not None:
                     raise AssertionError('match exited before SIGKILL test')
                 time.sleep(.005)
             else:
                 raise AssertionError('real runner not started')
-            runner=children[0]
-            workers=[int(p) for p in Path(f'/proc/{runner}/task/{runner}/children').read_text().split()]
+            workers=[]
+            for runner in children:
+                workers.extend(int(p) for p in Path(f'/proc/{runner}/task/{runner}/children').read_text().split())
             parent.kill()
             parent.wait()
             try:
                 with locked(root):
-                    assert not any(live(p) for p in [runner,*workers]), 'output unlocked while orphan processes are live'
+                    assert not any(live(p) for p in [*children,*workers]), 'output unlocked while orphan processes are live'
             except ValueError as error:
                 assert 'locked' in str(error)
             deadline=time.monotonic()+5
-            while any(live(p) for p in [runner,*workers]) and time.monotonic()<deadline:
+            while any(live(p) for p in [*children,*workers]) and time.monotonic()<deadline:
                 time.sleep(.005)
-            assert not any(live(p) for p in [runner,*workers]), 'runner/worker survived SIGKILL'
+            assert not any(live(p) for p in [*children,*workers]), 'runner/worker survived SIGKILL'
             with locked(root):
                 pass
         finally:
@@ -72,9 +76,9 @@ def main():
     result=load(root/'results.json')
     assert result['completed_matches']==2
     assert result['groups'][0]['complete_blocks']==1
-    assert len(list((root/'matches').glob('*/attempt-*')))==3
+    assert len(list((root/'matches').glob('*/attempt-*')))==2+args.jobs
     assert all(not any(r['summary']['ai_failures']) and not any(r['summary']['illegal_actions']) for r in result['matches'])
-    payload={'completed_matches':2,'sigkill_cleanup':True,'lock_covers_live_children':True,'resume_verified':True}
+    payload={'jobs':args.jobs,'killed_runners':len(children),'observed_workers':len(workers),'completed_matches':2,'sigkill_cleanup':True,'lock_covers_live_children':True,'resume_verified':True}
     (out/'acceptance.json').write_text(json.dumps(payload,indent=2)+'\n')
     print(json.dumps(payload),flush=True)
 

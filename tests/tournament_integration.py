@@ -26,6 +26,7 @@ def load(path):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--out',type=Path,required=True)
+    parser.add_argument('--jobs',type=int,default=1,help='also exercise cross-match concurrency and cancellation')
     parser.add_argument('--bin-dir',type=Path,default=REPO/'target/release')
     args = parser.parse_args()
     out, bins = args.out.resolve(),args.bin_dir.resolve()
@@ -44,15 +45,15 @@ def main():
     assert len(load(quick/'plan.json')['matches']) == 35
     # Interrupt a real live match, rather than only creating a synthetic partial folder.
     with (out/'interrupt.stdout.log').open('w') as stdout, (out/'interrupt.stderr.log').open('w') as stderr:
-        process = subprocess.Popen([sys.executable,str(CLI),'run',str(quick),'--max-matches','1'],stdout=stdout,stderr=stderr)
+        process = subprocess.Popen([sys.executable,str(CLI),'run',str(quick),'--max-matches',str(args.jobs),'--jobs',str(args.jobs)],stdout=stdout,stderr=stderr)
         try:
             deadline = time.monotonic()+15
             manifests=[]
             while time.monotonic() < deadline:
                 manifests=list((quick/'matches').glob('*/attempt-000/match/manifest.json'))
-                if manifests:
+                if len(manifests) == args.jobs:
                     try:
-                        if load(manifests[0])['status'] == 'in_progress':
+                        if all(load(p)['status'] == 'in_progress' for p in manifests):
                             break
                     except ValueError:
                         pass
@@ -67,16 +68,17 @@ def main():
             if process.poll() is None:
                 process.kill()
                 process.wait()
-    interrupted=manifests[0].parents[1]
-    assert load(interrupted/'attempt.json')['state']=='interrupted'
-    invoke('run',quick,'--max-matches','1')
+    interruptions=[p.parents[1] for p in manifests]
+    assert all(load(p/'attempt.json')['state']=='interrupted' for p in interruptions)
+    interrupted=interruptions[0]
+    invoke('run',quick,'--max-matches','1','--jobs',str(args.jobs))
     partial=load(quick/'results.json')
     assert partial['completed_matches']==1 and all(not g['standings'] for g in partial['groups'])
     first=quick/partial['matches'][0]['directory']
     before=(first/'summary.json').stat().st_mtime_ns
-    invoke('run',quick)
+    invoke('run',quick,'--jobs',str(args.jobs))
     assert (first/'summary.json').stat().st_mtime_ns==before
-    assert interrupted.is_dir() and (interrupted.parent/'attempt-001/match/summary.json').is_file()
+    assert all(p.is_dir() and (p.parent/'attempt-001/match/summary.json').is_file() for p in interruptions)
     finished=load(quick/'results.json')
     assert finished['completed_matches']==35
     assert all(g['complete_blocks']==1 and g['ranked_matches']==g['players'] for g in finished['groups'])
@@ -106,16 +108,18 @@ def main():
     balanced=out/'balanced-8p'
     invoke('plan','--config',config,'--out',balanced,'--mode','balanced','--only','8p')
     assert len(load(balanced/'plan.json')['matches'])==56
-    invoke('run',balanced)
+    invoke('run',balanced,'--jobs',str(args.jobs))
     formal=load(balanced/'results.json')
     group=formal['groups'][0]
     assert formal['completed_matches']==56 and group['complete_blocks']==1
     for item in group['standings']:
         assert item['matches']==56 and {s['matches'] for s in item['by_slot']}=={7}
     for result in (finished,formal):
+        assert result['execution']['jobs_used']==[args.jobs]
+        assert result['execution']['classification']==('parallel_self_test' if args.jobs>1 else 'serial')
         assert all(not any(r['summary']['ai_failures']) for r in result['matches'])
         assert all(not any(r['summary']['illegal_actions']) for r in result['matches'])
-    payload={'utc':datetime.now(timezone.utc).isoformat(),'matches':91,'quick_matches':35,'balanced_matches':56,
+    payload={'utc':datetime.now(timezone.utc).isoformat(),'jobs':args.jobs,'interrupted_matches':len(interruptions),'matches':91,'quick_matches':35,'balanced_matches':56,
              'wall_seconds':time.monotonic()-started,'bytes':sum(p.stat().st_size for p in out.rglob('*') if p.is_file()),
              'checks':['real SIGINT and preserved partial attempt','resume without duplicate matches','complete-block standings',
                        'real replay corruption rejected','frozen input mismatch rejected','2..8 quick blocks verified',

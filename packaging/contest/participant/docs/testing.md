@@ -25,9 +25,19 @@ python3 scripts/tournament.py plan --config config/tournament.example.json \
 python3 scripts/tournament.py run runs/check-new
 ```
 
-正式评估可以换成 `--mode balanced --repeats 5`，或通过 `--only 3p 8p` 选择名单。不指定 `--only` 会涵盖 2–8 队；默认正式模式 5 个重复块共 990 场，可能消耗较多时间和磁盘。快速模式每块 N 场，只均衡每队出生位；正式模式还均衡任意两队的相对位置，8 队每块 56 场。两者均无法完全消除多人组合效应。
+扩大自测可换成 `--mode balanced --repeats 5`，或通过 `--only 3p 8p` 选择名单。不指定 `--only` 会涵盖 2–8 队；**balanced 即使 `--repeats 1` 也有 198 场**，默认 5 个重复块共 **990 场**，可能消耗数小时和大量磁盘。先跑上面的 2 场，按本机耗时估算；全人数 quick 一块也有 35 场。不要在 60 分钟开发时限内贸然启动完整赛程，经常查询 `bin/fff-timer-query` 并保留可提交库。快速模式每块 N 场，只均衡每队出生位；正式模式还均衡任意两队的相对位置，8 队每块 56 场。两者均无法完全消除多人组合效应。
 
-执行与比赛均串行。Ctrl+C 可中断，重新运行同一 `run` 命令续跑；`run ... --max-matches 2` 可分段执行。查看输出目录 `report.md`、`standings.csv` 或 `results.json`。只有完整并通过回放验证的换位块参与排名；基础设施错误会停止执行，AI 超时/崩溃则计入比赛和故障统计。
+单场各队调用始终串行；跨场默认串行，可指定并发上限：
+
+```sh
+python3 scripts/tournament.py run runs/check-new --jobs 2
+# 正式评测由场外人员运行，固定并发为 1。
+python3 scripts/tournament.py run runs/formal-new --jobs 1
+```
+
+`--jobs N` 接受正整数，默认 **1**，表示至多 N 场（含回放校验）同时运行。并行争抢 CPU、内存与磁盘，墙钟决策预算不变，可能增加 AI 超时、改变行为和排名；不保证线性加速，也不会减少总回放空间。建议从 2 开始并留出资源余量。**正式评测使用 `--jobs 1`**；并行自测供快速筛选，最终在低负载串行环境检查超时和性能。报告会记录每场并发设置，并将含并行场次的结果标记为自测；改为串行续跑不会清除标记，正式对比须另建计划。
+
+Ctrl+C 会终止所有在途比赛并保留记录，可中断，重新运行同一 `run` 命令续跑；`run ... --max-matches 2` 可分段执行。查看输出目录 `report.md`、`standings.csv` 或 `results.json`。只有完整并通过回放验证的换位块参与排名；基础设施错误会停止执行，AI 超时/崩溃则计入比赛和故障统计。
 
 计划冻结候选库与地图，**修改 AI 后必须创建新的输出目录和计划**，不能用旧计划测试新版本。续跑期间不要移动计划目录或替换裁判/worker。只重建报告：
 

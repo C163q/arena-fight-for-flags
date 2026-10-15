@@ -86,13 +86,16 @@ def main():
     assert json.loads(plans.stdout)['planned_matches'] == 35
     run('duel-plan', [sys.executable, 'scripts/tournament.py', 'plan', '--config', 'config/tournament.example.json',
                      '--out', 'runs/duel', '--only', '2p', '--mode', 'balanced', '--repeats', '1'])
-    run('duel-first', [sys.executable, 'scripts/tournament.py', 'run', 'runs/duel', '--max-matches', '1'])
+    run('duel-first', [sys.executable, 'scripts/tournament.py', 'run', 'runs/duel', '--max-matches', '1','--jobs','2'])
     partial = json.loads((root / 'runs/duel/results.json').read_text())
     assert partial['completed_matches'] == 1
     run('duel-resume', [sys.executable, 'scripts/tournament.py', 'run', 'runs/duel'])
     run('duel-report', [sys.executable, 'scripts/tournament.py', 'report', 'runs/duel'])
     result = json.loads((root / 'runs/duel/results.json').read_text())
     assert result['completed_matches'] == 2
+    assert result['execution']['jobs_used']==[1,2]
+    assert result['execution']['classification']=='parallel_self_test'
+    assert '并行自测' in (root/'runs/duel/report.md').read_text()
     run('c-vs-rust', ['bin/fff-runner', '--map', 'maps/arena_2p.ron', '--ai', 'submission/libc_team.so',
                      '--ai', 'submission/libteam.so', '--seed', '41', '--out', 'runs/c-vs-rust'])
     run('c-vs-rust-verify', ['bin/fff-runner', 'verify', 'runs/c-vs-rust'])

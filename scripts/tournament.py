@@ -24,8 +24,9 @@ def main():
     plan.add_argument('--mode',choices=['balanced','quick'])
     plan.add_argument('--repeats',type=int)
     plan.add_argument('--only',nargs='+',help='select lineup IDs from config')
-    execute = sub.add_parser('run',help='run or resume a saved plan serially')
+    execute = sub.add_parser('run',help='run/resume; default serial, parallel jobs are for self-testing')
     execute.add_argument('root',type=Path)
+    execute.add_argument('--jobs',type=int,default=1,help='maximum concurrent matches (default: 1); >1 self-test only, CPU contention may cause AI timeouts; formal evaluation uses 1')
     execute.add_argument('--max-matches',type=int,help='stop normally after this many new matches; partial blocks remain unranked')
     show = sub.add_parser('report',help='verify saved matches and rebuild reports without running AI')
     show.add_argument('root',type=Path)
@@ -41,7 +42,9 @@ def main():
             print(json.dumps({'planned_matches':len(plan['matches']),'mode':plan['mode'],'repeats':plan['repeats'],
                              'output':str(args.out.resolve()),'blocks':[{'id':b['id'],**b['coverage']} for b in plan['blocks']]},ensure_ascii=False,indent=2))
         elif args.command == 'run':
-            status = run(args.root,args.max_matches)
+            if args.jobs > 1:
+                print(f'并行自测：最多 {args.jobs} 场同时运行；CPU/内存/磁盘争抢可能增加 AI 超时并改变结果。正式评测使用 --jobs 1。',file=sys.stderr,flush=True)
+            status = run(args.root,args.max_matches,args.jobs)
             report(args.root)
             print(json.dumps(status))
             print(f'Report: {args.root}/report.md')

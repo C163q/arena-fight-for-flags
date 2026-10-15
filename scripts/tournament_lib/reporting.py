@@ -39,13 +39,18 @@ def build_results(plan, rows):
         if mid not in expected or mid in seen or any(row[key] != expected[mid][key] for key in ('group','block','slots')):
             raise ValueError('duplicate or mismatched match result')
         seen.add(mid)
+    jobs_used = sorted({row.get('execution_jobs',1) for row in rows})
+    if any(type(value) is not int or value < 1 for value in jobs_used):
+        raise ValueError('invalid execution jobs')
+    execution = {'jobs_used':jobs_used,'classification':'parallel_self_test' if any(j > 1 for j in jobs_used) else 'serial',
+                 'formal_jobs':1}
     by_block = defaultdict(list)
     for match in plan['matches']:
         by_block[match['block']].append(match['id'])
     complete = {bid for bid,mids in by_block.items() if set(mids) <= seen}
     names = {a['id']:a['name'] for a in plan['ais']}
     result = {'version':1,'generated_utc':datetime.now(timezone.utc).isoformat(),
-              'mode':plan['mode'],'environment':plan['environment'],'bootstrap':{'seed':BOOTSTRAP_SEED,'resamples':2000,'unit':'complete repetition block','minimum_blocks':5},
+              'execution':execution,'mode':plan['mode'],'environment':plan['environment'],'bootstrap':{'seed':BOOTSTRAP_SEED,'resamples':2000,'unit':'complete repetition block','minimum_blocks':5},
               'completed_matches':len(rows),'planned_matches':len(plan['matches']), 'groups':[],'matches':rows}
     for group in plan['groups']:
         n, roster = group['players'],group['ais']
@@ -130,7 +135,7 @@ def write_reports(root, plan, rows):
     result['plan_sha256'] = sha(root/'plan.json')
     atomic_json(root/'results.json',result)
     stream = io.StringIO(newline='')
-    fields = ['group','players','rank','id','name','matches','complete_blocks','rank_score','mean_rank','mean_score',
+    fields = ['execution_classification','execution_jobs_used','group','players','rank','id','name','matches','complete_blocks','rank_score','mean_rank','mean_score',
               'mean_score_difference','sole_wins','sole_win_rate','joint_firsts','joint_first_rate','first_credit',
               'ai_failures','timeouts','illegal_actions','failure_rate','timeout_rate','illegal_action_rate']
     writer = csv.DictWriter(stream,fieldnames=fields,extrasaction='ignore')
@@ -139,6 +144,9 @@ def write_reports(root, plan, rows):
              f"报告时间：{result['generated_utc']}；计划 SHA-256：`{result['plan_sha256']}`。",'',
              '名次分为战胜对手比例，同分对手计半分；先按平均名次分，再按平均得分、独胜率排序。完全相同则并列。各名单分别比较，不合成全局排名。',
              '两两均衡不能消除三方以上的组合影响。快速模式仅保证单队位置均衡。至少五个完整块才给出按块重采样的描述性 95% 区间；样本较少，不能据此承诺普适显著性。','']
+    label = '并行自测（含混合续跑），不能作为串行正式成绩' if result['execution']['classification'] == 'parallel_self_test' else '串行执行'
+    lines += [f"执行：{label}；已采用场次的 jobs 配置：{result['execution']['jobs_used']}。正式评测使用 --jobs 1。",
+              '并行争抢 CPU、内存与磁盘，可能增加 AI 超时并改变排名；墙钟预算不变。','']
     for group in result['groups']:
         lines += [f"## {group['id']}：{group['players']} 队",'',
                   f"完整块 {group['complete_blocks']}/{group['planned_blocks']}；验证 {group['verified_matches']} 场，排名采用 {group['ranked_matches']} 场。",'']
@@ -148,7 +156,7 @@ def write_reports(root, plan, rows):
         lines += ['| 名次 | AI | 场次 | 名次分 / 95% 区间 | 平均分 | 平均名次 | 独胜 / 并列第一 | AI 故障 / 超时 / 非法动作 | P50/P95/P99 µs |',
                   '| --- | --- | --- | --- | --- | --- | --- | --- | --- |']
         for item in group['standings']:
-            writer.writerow(dict(item,group=group['id'],players=group['players']))
+            writer.writerow(dict(item,group=group['id'],players=group['players'],execution_classification=result['execution']['classification'],execution_jobs_used=','.join(map(str,result['execution']['jobs_used']))))
             ci = item['rank_score_ci95']
             interval = f'{ci[0]:.3f}–{ci[1]:.3f}' if ci else '完整块不足 5'
             timing = '/'.join(str(item['elapsed_us'][p]) for p in ('p50','p95','p99'))
@@ -171,7 +179,7 @@ def write_reports(root, plan, rows):
     for row in rows:
         lines.append(f"| {row['match_id']} | {row['block']} | {', '.join(row['slots'])} | {row['summary']['scores']} | [{row['directory']}]({row['directory']}/) |")
     lines += ['','JSON 保存逐场结果、完整位置覆盖、调用状态与耗时直方图；CSV 为逐名单排名。超时属于 AI 故障的子集，不能把二者相加。非法动作率分母为调用次数乘三。',
-              '耗时为裁判侧墙钟时间，包含恢复与 IPC；初始化另计。比赛及各队调用均串行，但系统其他程序仍可能影响耗时。','']
+              '耗时为裁判侧墙钟时间，包含恢复与 IPC；初始化另计。单场各队调用串行；跨场并发设置见报告开头，系统其他程序仍可能影响耗时。','']
     atomic_text(root/'standings.csv',stream.getvalue())
     atomic_text(root/'report.md','\n'.join(lines))
     return result

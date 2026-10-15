@@ -9,7 +9,8 @@
 1. 阅读 [基本规则](docs/rules.md) 和 [完整接口说明](docs/api.md)。唯一接入声明是 [C 头文件](include/ctf_ai.h)，自行编写所用语言的绑定。
 2. 创建自己的工程，实现四个 ABI 函数，编译 release 动态库。
 3. 创建 `submission/`，把可提交库保存为 `submission/libteam.so`；使用 [自主评测](docs/testing.md) 检查合法性、运行时间和强度。
-4. 通过 [回放说明](docs/replay.md) 分析比赛，迭代时保留已编译、可提交的版本。
+4. 自测先跑单场或 2p quick 的 2 场；全人数 balanced 即使 repeats=1 也有 198 场。可用 `run ... --jobs 2` 加快自测，但资源争抢会增加超时、改变结果；默认及正式评测均为 `--jobs 1`。详见 [自主评测](docs/testing.md)。
+5. 通过 [回放说明](docs/replay.md) 分析比赛，迭代时保留已编译、可提交的版本。
 
 运行环境为 Linux x86_64 GNU/glibc，Python 辅助工具需 3.10+。`manifest.json` 记录二进制构建信息、最低 glibc 需求、文件哈希和权限。自行准备编译器；采用相同目标平台的 C ABI，不要求 Rust 编译器与裁判相同版本。
 

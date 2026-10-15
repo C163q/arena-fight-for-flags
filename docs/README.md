@@ -30,6 +30,7 @@
 | [设计决策](design/decisions.md) | 已接受的方案及用户确认来源 |
 | [交付状态与路线图](design/roadmap.md) | 交付情况和后续方向 |
 
+- [测评机并行自测](design/specs/2026-10-15-tournament-jobs-design.md)
 - [计时查询 PID 命名空间兼容](design/specs/2026-10-15-timer-pidns-design.md)
 
 已完成功能的设计稿保存在 `design/specs/`，当前使用方式和实际边界以指南、参考规范为准：
@@ -45,7 +46,9 @@
 
 ## 实施计划 `plans/`
 
-以下计划均已完成，保留任务拆分、验收要求和实施证据：
+计划记录任务拆分、验收要求和实施证据；进度以各文件为准：
+
+- [测评机并行自测](plans/2026-10-15-tournament-jobs.md)
 
 - [计时查询 PID 命名空间兼容](plans/2026-10-15-timer-pidns.md)
 - [首回合预算与地图 v3](plans/2026-10-15-arena-v3.md)

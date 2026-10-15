@@ -70,7 +70,7 @@
 
 交付说明应包含实际修改、实际执行的检查、提交信息及尚存限制。不得将设计目标描述为已实现功能；按上述授权自行完成本任务的本地提交，不自动推送或发布远端。
 
-自动测评机见 [说明](docs/guides/tournament.md)。修改赛程或统计时运行 Python 单测；执行器变更额外运行 `tests/tournament_integration.py` 真实验收，进程/锁变更运行 `tests/tournament_parent_cleanup.py`。保持独立种子流、整场串行和完整重复块才排名；不能用损坏记录或不完整换位组生成正式名次，不把 AI 故障误作测评基础设施故障，续跑不信任统计缓存。
+自动测评机见 [说明](docs/guides/tournament.md)。修改赛程或统计时运行 Python 单测；执行器变更额外运行 `tests/tournament_integration.py` 真实验收，进程/锁变更运行 `tests/tournament_parent_cleanup.py`。保持独立种子流、单场队伍串行和完整重复块才排名；跨场 `--jobs` 默认 1，正式评测固定 1，并行自测必须保留并发来源与报告标记，混合续跑不能清除。并行/锁改动验证全部在途任务的中断、故障与 SIGKILL 清理；不能用损坏记录或不完整换位组生成正式名次，不把 AI 故障误作测评基础设施故障，续跑不信任统计缓存。
 
 总用时计时器见 [说明](docs/guides/timer.md)：人类手动启动 `fff-timer`，LLM 仅使用 `fff-timer-query` 读取。查询器不获取/释放锁、不写状态、不发控制信号；不得加入启动、停止、暂停、重置、改路径或预设时间的入口。正式路径固定在共享 `/tmp`，不能以环境变量绕开单例；兼容 PID 命名空间时以原子锁区间快照和稳定发布记录校验会话，不比较记录 PID 与命名空间相对锁 PID；内外仍须共享状态 inode 与时钟基准；不要删除运行中实例的状态 inode。修改时验证 Rust 单测及 `tests/timer_integration.py`，只清理测试自己启动的进程，不能干扰人类既有计时器。涉及锁/发布校验时额外运行 `tests/timer_publication_race.py`，该测试仅使用私有状态文件并要求真实 PID 命名空间。
 

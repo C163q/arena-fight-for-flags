@@ -66,7 +66,7 @@ AI 可见全图、所有棋子位置/血量/携旗、当前旗帜、比分和复
 
 ## 自动测评
 
-为每种人数指定一组 AI，测评机自动安排位置均衡、多种子对抗，串行执行并验证每场回放，支持中断续跑，输出 Markdown/CSV/JSON 报告。正式 8 人赛程每种子 56 场，均衡每个 AI 的出生位及任意两个 AI 的相对位置；快速模式每种子 8 场。
+为每种人数指定一组 AI，测评机自动安排位置均衡、多种子对抗，默认串行执行并验证每场回放，可指定跨场并发用于自测，支持中断续跑，输出 Markdown/CSV/JSON 报告。正式 8 人赛程每种子 56 场，均衡每个 AI 的出生位及任意两个 AI 的相对位置；快速模式每种子 8 场。
 
 ```sh
 # 编辑示例中的 AI 库和各人数名单；plan 不启动 AI。
@@ -74,7 +74,9 @@ python3 scripts/tournament.py plan --config config/tournament.example.json --out
 python3 scripts/tournament.py run runs/tournament-new
 ```
 
-示例覆盖 2–8 人、每种人数 5 个种子，共 990 场；可用 `--mode quick --repeats 1` 先跑 35 场，或 `--only 8p` 只选择 8 人名单。查看输出目录 `report.md`；排名只使用完整换位组，不合并不同人数/名单。详见 [测评机说明](docs/guides/tournament.md)。
+`run ... --jobs 4` 可最多同时跑四场，默认 1；并行争抢资源可能增加 AI 超时和改变排名，正式评测固定 `--jobs 1`。含并行场次的报告标记为自测，串行续跑保留标记。
+
+示例覆盖 2–8 人、每种人数 5 个种子，共 990 场；即使 `--repeats 1` 仍有 198 场。建议先用 `--only 2p --mode quick --repeats 1` 检查 2 场并估算耗时；可用 `--mode quick --repeats 1` 先跑 35 场，或 `--only 8p` 只选择 8 人名单。查看输出目录 `report.md`；排名只使用完整换位组，不合并不同人数/名单。详见 [测评机说明](docs/guides/tournament.md)。
 
 ## 参赛题包
 
