@@ -65,6 +65,7 @@
 
 记录独立审查发现、修复、回归证据与审查范围：
 
+- [测评机并行自测审查](reviews/tournament-jobs-review-2026-10-15.md)
 - [计时查询 PID 命名空间审查](reviews/timer-pidns-review-2026-10-15.md)
 - [首回合预算与地图 v3 审查](reviews/arena-v3-review-2026-10-15.md)
 - [参赛题包审查](reviews/contest-kit-review-2026-10-15.md)
@@ -76,6 +77,7 @@
 
 报告结论仅适用于记录中的地图、AI、配置和样本；原始对局数据保留在本地 `runs/`，不随文档迁移。
 
+- [测评机并行自测实测](reports/tournament-jobs-2026-10-15.md)：并发、清理、91 场完整验收与新题包。
 - [基准 AI 首版实测](reports/evaluation-2026-10-13.md)：旧地图上的对照结果。
 - [地图 v2 与 20 分终局标定](reports/map-balance-2026-10-13.md)：历史地图的标定与位置偏好。
 - [首回合预算与地图 v3 实测](reports/arena-v3-2026-10-15.md)：当前默认地图、49 场自战和位置偏好。
