@@ -1,6 +1,6 @@
 # 自动测评机
 
-`scripts/tournament.py` 为每种人数的一组固定 AI 名单安排换位、多种子比赛和统计。它使用正式 runner、C ABI 与串行 worker；每队仍有 50ms 预算。比赛之间也串行执行。
+`scripts/tournament.py` 为每种人数的一组固定 AI 名单安排换位、多种子比赛和统计。它使用正式 runner、C ABI 与串行 worker；每队比赛第 1 回合 250ms、之后每回合 50ms，重启不重新获得首回合额度。比赛之间也串行执行。
 
 ## 使用
 
