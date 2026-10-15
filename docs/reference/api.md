@@ -1,6 +1,6 @@
 # AI C ABI v1
 
-已实现于 [Rust 类型](../crates/ai-abi/src/lib.rs) 和 [C 头文件](../include/ctf_ai.h)，首版支持 Linux 64 位。ABI v1 的结构布局以这两份文件为准，不兼容变更提升版本。进程内 ABI 与 worker JSON 通信是不同边界，裸指针不会离开 worker。
+已实现于 [Rust 类型](../../crates/ai-abi/src/lib.rs) 和 [C 头文件](../../include/ctf_ai.h)，首版支持 Linux 64 位。ABI v1 的结构布局以这两份文件为准，不兼容变更提升版本。进程内 ABI 与 worker JSON 通信是不同边界，裸指针不会离开 worker。
 
 ## 导出与生命周期
 
@@ -81,4 +81,4 @@ fn strategy(_view: &ObservationView<'_>) -> CtfTeamAction {
 fff_ai_abi::export_ai!(strategy);
 ```
 
-以 [bots/wait](../bots/wait/src/lib.rs) 的 Cargo 设置建立 cdylib，依赖公开 `fff-ai-abi`。公共 `fff-ai-sdk` 包含 BFS/参考策略，仅依赖 ABI，不连接引擎私有状态。需要私有记忆时自行实现四个导出函数，遵守相同布局与生命周期。
+以 [bots/wait](../../bots/wait/src/lib.rs) 的 Cargo 设置建立 cdylib，依赖公开 `fff-ai-abi`。公共 `fff-ai-sdk` 包含 BFS/参考策略，仅依赖 ABI，不连接引擎私有状态。需要私有记忆时自行实现四个导出函数，遵守相同布局与生命周期。

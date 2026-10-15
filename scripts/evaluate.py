@@ -18,7 +18,7 @@ def percentile(values, percent):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, default=Path("runs/evaluation-v1"))
-    parser.add_argument("--report", type=Path, default=Path("docs/evaluation-2026-10-13.md"))
+    parser.add_argument("--report", type=Path, default=Path("docs/reports/evaluation-2026-10-13.md"))
     parser.add_argument("--bin-dir", type=Path, default=Path("target/release"))
     args = parser.parse_args()
     if args.out.exists():
@@ -75,7 +75,7 @@ def main():
         lines.append(f"| {players} | {opponent} | {len(group)} | {'/'.join(map(str, counts))} | {statistics.mean(row['score_difference'] for row in group):.2f} | {percentile(times,50)}/{percentile(times,95)}/{percentile(times,99)} | {failures} / {invalid} |")
     lines += ["", "耗时是裁判侧完整请求墙钟时间，包含恢复、IPC 和返回校验，不是单独策略函数的 CPU 时间；初始化另计。", "",
               "这是一组固定种子的初步基线评估，不能由此宣称对所有 AI/地图达到某个普遍胜率。现有地图存在出生位距离差异，轮换可揭示位置影响，但地图公平性仍需进一步调整。", "",
-              "重现：先执行 `cargo build --release --workspace`，再执行 `python3 scripts/evaluate.py --out runs/evaluation-new --report docs/evaluation-new.md`。输出目录必须不存在。"]
+              "重现：先执行 `cargo build --release --workspace`，再执行 `python3 scripts/evaluate.py --out runs/evaluation-new --report docs/reports/evaluation-new.md`。输出目录必须不存在。"]
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(args.report)

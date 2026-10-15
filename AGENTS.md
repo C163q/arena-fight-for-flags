@@ -4,21 +4,22 @@
 
 这是一个用 Rust 编写的回合制夺旗 AI 对战项目。玩家通过 C ABI 提交自己队伍三个棋子的操作，在每队每回合 50ms 的预算内竞争。主程序负责权威结算、进程管理和记录；回放工具供人观看，ASCII 记录供 LLM 分析。
 
-当前仓库已有首个可运行版本：规则引擎、C ABI、串行 worker、参考 AI、记录验证与离线播放器。用户已接受首版补充默认方案；规则与决策记录分别见 [规则](docs/rules.md) 与 [设计决策](docs/decisions.md)。后续新增规则应明确记录，不将尚未验证的目标描述为已实现行为。
+当前仓库已有首个可运行版本：规则引擎、C ABI、串行 worker、参考 AI、记录验证与离线播放器。用户已接受首版补充默认方案；规则与决策记录分别见 [规则](docs/reference/rules.md) 与 [设计决策](docs/design/decisions.md)。后续新增规则应明确记录，不将尚未验证的目标描述为已实现行为。
 
 ## 开始工作前
 
 1. 阅读 [README](README.md)、本文件，以及所改模块对应的文档。
 2. 检查工作区变更，保留用户和其他协作者已有的修改。
-3. 检查 [设计决策](docs/decisions.md)。现有首版决策已确认；新增实现若依赖未决规则，先提出具体建议并确认，可以继续不依赖该规则的工作。
-4. 保持变更聚焦。用户已授权首版实现和本地 Git 管理；后续工作按当前任务范围执行，不自动推送或发布远端。
+3. 检查 [设计决策](docs/design/decisions.md)。现有首版决策已确认；新增实现若依赖未决规则，先提出具体建议并确认，可以继续不依赖该规则的工作。
+4. 保持变更聚焦。用户已授权自行处理本地 Git 提交：完成当前任务并通过相应检查后，自行整理并提交本任务的变更，无需再次确认；保留用户和其他协作者的无关修改，不混入提交。不自动推送或发布远端。
 
 ## 文档与规则的权威
 
+- 文档入口为 [文档导航](docs/README.md)。使用说明放在 `docs/guides/`，规则与接口放在 `docs/reference/`，架构和决策放在 `docs/design/`；设计稿放在 `docs/design/specs/`，实施计划、审查和实测分别放在 `docs/plans/`、`docs/reviews/`、`docs/reports/`。新增或移动文档时同步导航和引用。
 - 用户本次会话中的明确要求优先。若与文档冲突，修改文档并说明影响。
-- `docs/rules.md` 是玩法规则的单一来源；`docs/api.md` 定义 AI 接口；`docs/replay.md` 定义记录与播放约定。
-- `docs/maps.md` 定义 RON 地图格式与地图加载校验；`docs/architecture.md` 解释模块边界；`docs/roadmap.md` 定义交付顺序；`docs/benchmark-ai.md` 定义基准 AI。
-- `docs/decisions.md` 记录现有决策与后续未决项。改变决策时同步修改规则与受影响文档，保留理由。
+- `docs/reference/rules.md` 是玩法规则的单一来源；`docs/reference/api.md` 定义 AI 接口；`docs/reference/replay.md` 定义记录与播放约定。
+- `docs/reference/maps.md` 定义 RON 地图格式与地图加载校验；`docs/design/architecture.md` 解释模块边界；`docs/design/roadmap.md` 定义交付顺序；`docs/reference/benchmark-ai.md` 定义基准 AI。
+- `docs/design/decisions.md` 记录现有决策与后续未决项。改变决策时同步修改规则与受影响文档，保留理由。
 - 文档使用中文；代码标识符使用英文。协议字段、ABI、阶段顺序或规则行为改变时，同步修改示例与验证用例。
 - 公开接口为 C ABI v1，以 `include/ctf_ai.h` 和 Rust 等价类型为准；不兼容修改必须提升 ABI 版本。
 
@@ -59,16 +60,16 @@
 
 ## 计划中的结构
 
-具体目录见 [架构](docs/architecture.md)。Cargo workspace 分开规则引擎、C ABI、公共策略 SDK、worker、对战 CLI、记录与参考 AI；独立 Python 导出器及 HTML 播放器在 `viewer/`。不要在基准 AI 中引入引擎私有依赖。
+具体目录见 [架构](docs/design/architecture.md)。Cargo workspace 分开规则引擎、C ABI、公共策略 SDK、worker、对战 CLI、记录与参考 AI；独立 Python 导出器及 HTML 播放器在 `viewer/`。不要在基准 AI 中引入引擎私有依赖。
 
 ## 验证与交付
 
 按改动范围执行 `cargo fmt --check`、`cargo test --workspace`、`cargo clippy --workspace --all-targets -- -D warnings`。导出器运行 `python3 -m unittest discover -s viewer -p 'test_*.py' -v`；真实对战与浏览器命令见 README。进程组测试需要系统允许停止/恢复/终止子进程。
 
-涉及 worker 时，验证无限循环、崩溃、坏 ABI、超时整队等待及后续回合恢复；涉及规则时，验证 [路线图](docs/roadmap.md) 中对应案例；涉及地图时，验证 2–8 人资产可解析、边界全封、出生区与旗点可达、人数匹配；涉及回放时，验证文本与结构化状态一致、离线播放以及格式错误提示。默认地图 v2 的生成参数在 `scripts/generate_maps.py`，修改后运行 `python3 scripts/generate_maps.py --check`；数值调整通过 `scripts/calibrate_maps.py` 正式自战并保留报告，不能将到时截尾当作达标耗时。
+涉及 worker 时，验证无限循环、崩溃、坏 ABI、超时整队等待及后续回合恢复；涉及规则时，验证 [路线图](docs/design/roadmap.md) 中对应案例；涉及地图时，验证 2–8 人资产可解析、边界全封、出生区与旗点可达、人数匹配；涉及回放时，验证文本与结构化状态一致、离线播放以及格式错误提示。默认地图 v2 的生成参数在 `scripts/generate_maps.py`，修改后运行 `python3 scripts/generate_maps.py --check`；数值调整通过 `scripts/calibrate_maps.py` 正式自战并保留报告，不能将到时截尾当作达标耗时。
 
-交付说明应包含实际修改、实际执行的检查及尚存限制。不得将设计目标描述为已实现功能，不自动提交、推送或发布未经本次任务要求的成果。
+交付说明应包含实际修改、实际执行的检查、提交信息及尚存限制。不得将设计目标描述为已实现功能；按上述授权自行完成本任务的本地提交，不自动推送或发布远端。
 
-自动测评机见 [说明](docs/tournament.md)。修改赛程或统计时运行 Python 单测；执行器变更额外运行 `tests/tournament_integration.py` 真实验收，进程/锁变更运行 `tests/tournament_parent_cleanup.py`。保持独立种子流、整场串行和完整重复块才排名；不能用损坏记录或不完整换位组生成正式名次，不把 AI 故障误作测评基础设施故障，续跑不信任统计缓存。
+自动测评机见 [说明](docs/guides/tournament.md)。修改赛程或统计时运行 Python 单测；执行器变更额外运行 `tests/tournament_integration.py` 真实验收，进程/锁变更运行 `tests/tournament_parent_cleanup.py`。保持独立种子流、整场串行和完整重复块才排名；不能用损坏记录或不完整换位组生成正式名次，不把 AI 故障误作测评基础设施故障，续跑不信任统计缓存。
 
-总用时计时器见 [说明](docs/timer.md)：人类手动启动 `fff-timer`，LLM 仅使用 `fff-timer-query` 读取。查询器不获取/释放锁、不写状态、不发控制信号；不得加入启动、停止、暂停、重置、改路径或预设时间的入口。正式路径固定在共享 `/tmp`，不能以环境变量绕开单例；不要删除运行中实例的状态 inode。修改时验证 Rust 单测及 `tests/timer_integration.py`，只清理测试自己启动的进程，不能干扰人类既有计时器。
+总用时计时器见 [说明](docs/guides/timer.md)：人类手动启动 `fff-timer`，LLM 仅使用 `fff-timer-query` 读取。查询器不获取/释放锁、不写状态、不发控制信号；不得加入启动、停止、暂停、重置、改路径或预设时间的入口。正式路径固定在共享 `/tmp`，不能以环境变量绕开单例；不要删除运行中实例的状态 inode。修改时验证 Rust 单测及 `tests/timer_integration.py`，只清理测试自己启动的进程，不能干扰人类既有计时器。

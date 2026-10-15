@@ -58,6 +58,4 @@ python3 tests/timer_integration.py --out runs/timer-check-new
 
 单测用内部临时路径和时间输入验证整秒、进位、上限、独立进程争锁、初始化、旧状态、未知数据与特殊文件保护，不为正式程序暴露测试路径或预设时间。真实验收覆盖非 TTY 静默、时间前进、只读查询、跨目录单例、SIGINT/SIGTERM/SIGKILL 后释放与归零、大/小窗口及 resize、正常画面恢复、关闭和堵塞输出。
 
-2026-10-14 首次完整验收共 14 项通过，耗时约 4.51 秒，数据在本地忽略目录 `runs/timer-v1/acceptance-complete/`。当时全 workspace 53 个 Rust 测试与既有 29 个 Python 测试、fmt/clippy 均通过。跨登录用户通过共享路径/文件权限设计支持，验收实际使用当前用户的独立进程，未声称执行过真实换 UID 的测试。
-
-独立审查后的退出收尾修复增加了短暂堵塞后恢复的真实 PTY 回归；最终 Rust 测试共 54 个（计时器 12 个），Python 29 个，fmt/clippy 与 14 项 release 验收通过。详见 [审查记录](timer-review-2026-10-14.md)。
+历史验收结果、独立审查及修复证据见 [计时器审查记录](../reviews/timer-review-2026-10-14.md)。

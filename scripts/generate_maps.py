@@ -7,7 +7,7 @@ from pathlib import Path
 
 SIZES = {2: 25, 3: 29, 4: 31, 5: 33, 6: 35, 7: 37, 8: 41}
 FLAG_RADII = {2: 4, 3: 5, 4: 6, 5: 7, 6: 8, 7: 9, 8: 11}
-# Calibrated from five seeded baseline self-play games per map; see docs/map-balance-2026-10-13.md.
+# Calibrated from five seeded baseline self-play games per map; see docs/reports/map-balance-2026-10-13.md.
 LIMITS = {2: 400, 3: 500, 4: 600, 5: 700, 6: 800, 7: 900, 8: 1000}
 DIRECTIONS = {
     2: [(7, 2), (-7, -2)],

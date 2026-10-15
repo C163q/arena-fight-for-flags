@@ -24,7 +24,7 @@ match/
 
 ## 实际 JSON 结构
 
-具体 Rust 类型见 [replay/src/lib.rs](../crates/replay/src/lib.rs) 和 [engine/src/model.rs](../crates/engine/src/model.rs)。
+具体 Rust 类型见 [replay/src/lib.rs](../../crates/replay/src/lib.rs) 和 [engine/src/model.rs](../../crates/engine/src/model.rs)。
 
 | 文件 | 内容 |
 | --- | --- |
@@ -89,7 +89,7 @@ python3 viewer/export.py runs/my-match --out /tmp/my-replay.html
 python3 viewer/export.py runs/my-match --format html
 ```
 
-直接用浏览器打开 [通用播放器](../viewer/index.html)，将 `replay.json` 拖入页面，或点击“打开回放”。同一页面可反复打开不同比赛，不需要服务器、网络或 AI 库。通用页面与同目录的 `player.css`、`player.js` 配套使用；分享单个文件时用自包含 `replay.html`，它也支持再载入其他比赛。已有比赛目录重新导出即可，无需重新运行比赛。
+直接用浏览器打开 [通用播放器](../../viewer/index.html)，将 `replay.json` 拖入页面，或点击“打开回放”。同一页面可反复打开不同比赛，不需要服务器、网络或 AI 库。通用页面与同目录的 `player.css`、`player.js` 配套使用；分享单个文件时用自包含 `replay.html`，它也支持再载入其他比赛。已有比赛目录重新导出即可，无需重新运行比赛。
 
 数据包顶层为 `{bundle_format:"fff-replay",bundle_version:1,manifest,map,initial,records,summary}`，其中 initial 是初始 Snapshot，records 是按回合升序的完整 JSON 记录，summary 在未完成比赛中为 null。它是播放交换格式，不改变比赛目录原有 format_version=1，也不取代逐轮 ASCII 和 Rust 校验所需的原始文件。64 位 seed、AI seed、rng_state 以十进制字符串保存，避免 JavaScript 精度损失；JSON 不包含页面代码。
 

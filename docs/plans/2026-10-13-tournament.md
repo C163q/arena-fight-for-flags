@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3.10+、现有 Rust release runner/worker、JSON/CSV/Markdown。
 
-**Spec:** `docs/superpowers/specs/2026-10-13-tournament-design.md`。用户已确认按人数指定名单及推荐方案，延续本会话逐项实现方式。
+**Spec:** `docs/design/specs/2026-10-13-tournament-design.md`。用户已确认按人数指定名单及推荐方案，延续本会话逐项实现方式。
 
 ## Global Constraints
 
@@ -61,7 +61,7 @@
 
 ### Task 4: 实战验收、文档与最终审查
 
-**Files:** `tests/tournament_integration.py`、`docs/tournament.md`、README、benchmark/architecture/AGENTS 相关说明；计划与设计状态。
+**Files:** `tests/tournament_integration.py`、`docs/guides/tournament.md`、README、benchmark/architecture/AGENTS 相关说明；计划与设计状态。
 
 - [x] 先写实战验收脚本：2–8 队快速 35 场与 8 队正式 56 场；恢复不增打、完整块才排名、损坏/不匹配拒绝、半场重试保留原目录。
 - [x] 通过正式 release runner 执行验收，预期 91 场通过逐场 verify，报告记实际耗时、存储量；不将这次功能验收称为策略强度定论。
@@ -79,6 +79,6 @@
 
 Python 19 个工具测试及 8 个回放测试通过。Rust 全套首次在受限沙箱被 Unix socket 权限拒绝，升级到具备进程/通信权限的环境验证；fmt/clippy 均通过。
 
-独立审查及修复见 [审查记录](../../tournament-review-2026-10-13.md)。修复后 Python 测试为 21+8，Rust 42；额外真实 SIGKILL 恢复对局 2 场，既有 101 场全部重新 verify。
+独立审查及修复见 [审查记录](../reviews/tournament-review-2026-10-13.md)。修复后 Python 测试为 21+8，Rust 42；额外真实 SIGKILL 恢复对局 2 场，既有 101 场全部重新 verify。
 
 交付：实现与审查修复已合并 main（`8c2e948`），合并后 42 个 Rust 测试、29 个 Python 测试及 fmt/clippy 通过；默认配置从主目录生成 990 场计划成功。main 上额外执行真实 SIGKILL 清理/续跑 2 场并全部 verify，总完成对局 105 场。本次功能工作区与分支已正常清理，所有对局留在根目录 `runs/tournament-v1/`。

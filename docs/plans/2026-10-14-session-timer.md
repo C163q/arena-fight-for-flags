@@ -8,7 +8,7 @@
 
 **Tech Stack:** Rust 2024、标准库、workspace 已有 libc；真实 PTY/进程验收用 Python 标准库。
 
-**Spec:** `docs/superpowers/specs/2026-10-13-session-timer-design.md`，用户已明确批准实现。延续本会话 inline 执行和本地 Git 管理。
+**Spec:** `docs/design/specs/2026-10-13-session-timer-design.md`，用户已明确批准实现。延续本会话 inline 执行和本地 Git 管理。
 
 ## Global Constraints
 
@@ -49,7 +49,7 @@
 
 ### Task 3: 真实验收与文档
 
-**Files:** `tests/timer_integration.py`、`docs/timer.md`、README、AGENTS、architecture 与设计状态。
+**Files:** `tests/timer_integration.py`、`docs/guides/timer.md`、README、AGENTS、architecture 与设计状态。
 
 - [x] 真实 release 程序验证：不同目录竞争、时间前进、读取不改文件、退出/重启/强杀、拒绝参数、大/小/resize PTY、非 TTY 静默、关闭与堵塞显示、自然终端收尾。拒绝干扰既有计时器。
 - [x] 全 workspace Rust 测试、fmt/clippy、Python 单测通过；保存实际验收结果。
@@ -64,6 +64,6 @@
 
 53 个 Rust workspace 测试（计时器 11 个）、29 个既有 Python 单测、fmt/clippy 通过。真实 release 验收 14 项通过，数据保存在根目录 `runs/timer-v1/acceptance-complete/acceptance.json`，耗时 4.51 秒；没有遗留运行中的计时器。大字抓取见该目录 ANSI 文件，纯文本预览为 `runs/timer-v1/preview.txt`。全局状态文件保留，查询返回未运行。
 
-独立审查正常完成；唯一 Important 已 RED→GREEN 修复，见 [审查记录](../../timer-review-2026-10-14.md)。修复后 Rust 54、Python 29、fmt/clippy 通过，14 项最终 release 验收通过。
+独立审查正常完成；唯一 Important 已 RED→GREEN 修复，见 [审查记录](../reviews/timer-review-2026-10-14.md)。修复后 Rust 54、Python 29、fmt/clippy 通过，14 项最终 release 验收通过。
 
 交付：实现及审查修复已合并 main（`1789688`）；主目录重新构建 release，54 个 Rust 测试、29 个 Python 测试及 fmt/clippy 再次通过。默认路径真实验收 14 项通过（约 4.76 秒），见 `runs/timer-v1/acceptance-merged/`。功能工作区与分支正常清理；最终查询返回不存在，没有留下测试计时器运行。

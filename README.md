@@ -62,7 +62,7 @@ AI 可见全图、所有棋子位置/血量/携旗、当前旗帜、比分和复
 | 7 | 37×37 | 20 | 900 |
 | 8 | 41×41 | 20 | 1000 |
 
-地图已调整为菱形出生环与稀疏障碍，所有出生位到最近旗点等距；仍有实战位置偏好，比较 AI 时轮换位置并跑多个种子。详见 [地图标定报告](docs/map-balance-2026-10-13.md) 和 [地图概览](docs/assets/maps-v2.svg)。独立进程提供超时/崩溃隔离，不是执行恶意本地库的完整安全沙箱。
+地图已调整为菱形出生环与稀疏障碍，所有出生位到最近旗点等距；仍有实战位置偏好，比较 AI 时轮换位置并跑多个种子。详见 [地图标定报告](docs/reports/map-balance-2026-10-13.md) 和 [地图概览](docs/assets/maps-v2.svg)。独立进程提供超时/崩溃隔离，不是执行恶意本地库的完整安全沙箱。
 
 ## 自动测评
 
@@ -74,25 +74,26 @@ python3 scripts/tournament.py plan --config config/tournament.example.json --out
 python3 scripts/tournament.py run runs/tournament-new
 ```
 
-示例覆盖 2–8 人、每种人数 5 个种子，共 990 场；可用 `--mode quick --repeats 1` 先跑 35 场，或 `--only 8p` 只选择 8 人名单。查看输出目录 `report.md`；排名只使用完整换位组，不合并不同人数/名单。详见 [测评机说明](docs/tournament.md)。
+示例覆盖 2–8 人、每种人数 5 个种子，共 990 场；可用 `--mode quick --repeats 1` 先跑 35 场，或 `--only 8p` 只选择 8 人名单。查看输出目录 `report.md`；排名只使用完整换位组，不合并不同人数/名单。详见 [测评机说明](docs/guides/tournament.md)。
 
 ## 文档与检查
 
-AI 设计/编码阶段可使用独立的总用时计时器。人类手动运行 `target/release/fff-timer`，LLM 运行 `target/release/fff-timer-query` 只查询一行 `HH:MM:SS`。计时器全局单例，终端支持大字与缩小回退，非终端静默计时；退出后重新归零，到达 `99:59:59` 保持上限。构建命令为 `cargo build --release -p fff-session-timer`；详见 [计时器说明](docs/timer.md)。
+AI 设计/编码阶段可使用独立的总用时计时器。人类手动运行 `target/release/fff-timer`，LLM 运行 `target/release/fff-timer-query` 只查询一行 `HH:MM:SS`。计时器全局单例，终端支持大字与缩小回退，非终端静默计时；退出后重新归零，到达 `99:59:59` 保持上限。构建命令为 `cargo build --release -p fff-session-timer`；详见 [计时器说明](docs/guides/timer.md)。
 
 | 文档 | 用途 |
 | --- | --- |
+| [文档导航](docs/README.md) | 按使用、规范、设计、计划、审查和实测查找全部文档 |
 | [AGENTS.md](AGENTS.md) | 编码代理协作约定 |
-| [规则](docs/rules.md) | 权威玩法与阶段顺序 |
-| [地图](docs/maps.md) | RON schema、七图与校验 |
-| [架构](docs/architecture.md) | 模块与进程生命周期 |
-| [API](docs/api.md) | 已实现 C ABI v1 的字段与所有权 |
-| [回放](docs/replay.md) | 实际文件格式和重放/导出约定 |
-| [基准 AI](docs/benchmark-ai.md) | 策略、评测方法与限制 |
-| [自动测评机](docs/tournament.md) | 固定名单、均衡赛程、续跑与统计 |
-| [计时器](docs/timer.md) | 人类终端大字计时与 LLM 只读查询 |
-| [决策](docs/decisions.md) | 已接受设计与用户确认记录 |
-| [路线图](docs/roadmap.md) | 首版交付与后续工作 |
+| [规则](docs/reference/rules.md) | 权威玩法与阶段顺序 |
+| [地图](docs/reference/maps.md) | RON schema、七图与校验 |
+| [架构](docs/design/architecture.md) | 模块与进程生命周期 |
+| [API](docs/reference/api.md) | 已实现 C ABI v1 的字段与所有权 |
+| [回放](docs/reference/replay.md) | 实际文件格式和重放/导出约定 |
+| [基准 AI](docs/reference/benchmark-ai.md) | 策略、评测方法与限制 |
+| [自动测评机](docs/guides/tournament.md) | 固定名单、均衡赛程、续跑与统计 |
+| [计时器](docs/guides/timer.md) | 人类终端大字计时与 LLM 只读查询 |
+
+架构与设计依据见 [设计决策](docs/design/decisions.md) 和 [路线图](docs/design/roadmap.md)；历史设计稿、实施计划、审查及实测报告在 [文档导航](docs/README.md) 中单独列出。
 
 ```sh
 cargo fmt --check
@@ -105,7 +106,7 @@ python3 tests/integration.py --out runs/smoke-new
 python3 tests/browser.py runs/smoke-new/2p/replay.html
 python3 tests/viewer_usability.py runs/smoke-new/8p/replay.html runs/smoke-new/8p/replay.json
 python3 tests/parent_cleanup.py
-python3 scripts/evaluate.py --out runs/evaluation-new --report docs/evaluation-new.md
+python3 scripts/evaluate.py --out runs/evaluation-new --report docs/reports/evaluation-new.md
 ```
 
 进程测试必须允许创建独立进程组、发送停止/恢复/终止信号；受限沙箱可能拒绝这些操作。Python 导出器验证结构，完整规则与 ASCII 一致性通过 `fff-runner verify` 检查；可读取未完成比赛的完整前缀。导出器当前最多 25000 帧、总输入 512MiB。

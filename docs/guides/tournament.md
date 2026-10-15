@@ -4,7 +4,7 @@
 
 ## 使用
 
-先编译所有参赛库及裁判，再编辑 [示例配置](../config/tournament.example.json)：
+先编译所有参赛库及裁判，再编辑 [示例配置](../../config/tournament.example.json)：
 
 ```sh
 cargo build --release --workspace
@@ -117,4 +117,4 @@ python3 tests/tournament_parent_cleanup.py --out runs/tournament-kill-check-new
 
 实战验收使用正式 release runner，覆盖 2–8 队快速模式共 35 场、8 队正式模式 56 场，验证真实中断与恢复、复用已完成场次、记录损坏/输入变化拒绝和每场回放。验收同库自战证明工具流程，不用于断言 AI 强度排名。
 
-2026-10-13 首次验收的 91 场全部通过，没有 AI 故障/非法动作；包括中断、恢复复用、再次验证和报告生成共耗时 622.97 秒，输出文件合计 1,422,664,611 字节。数据保存在本地忽略目录 `runs/tournament-v1/acceptance/`，摘要为 `acceptance.json`。这是当前机器与基准 AI 的实际开销，不是每场固定耗时，也不能保证换成耗满 50ms 的 AI 后仍有相同速度。
+历史验收结果、独立审查及修复证据见 [测评机审查记录](../reviews/tournament-review-2026-10-13.md)。

@@ -26,3 +26,7 @@
 没有未修复的审查发现。保留状态文件是协议设计，查询依靠内核锁判断活性；未运行时不会恢复旧计时。
 
 合并后 main 再次通过 54 个 Rust 测试、29 个 Python 测试、fmt/clippy 和 release 构建；默认路径真实验收 14 项通过，数据在 `runs/timer-v1/acceptance-merged/`。最终查询为未运行，本次工作区正常清理。
+
+## 首次验收记录
+
+2026-10-14 首次完整验收共 14 项通过，耗时约 4.51 秒，数据在本地忽略目录 `runs/timer-v1/acceptance-complete/`。当时全 workspace 53 个 Rust 测试与既有 29 个 Python 测试、fmt/clippy 均通过。跨登录用户通过共享路径/文件权限设计支持，验收实际使用当前用户的独立进程，未声称执行过真实换 UID 的测试。
