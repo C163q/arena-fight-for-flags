@@ -7,6 +7,7 @@
 | 文档 | 用途 |
 | --- | --- |
 | [自动测评机](guides/tournament.md) | 配置参赛名单、生成赛程、运行与续跑、查看排名 |
+| [参赛题包](guides/contest-kit.md) | 一键生成、分发边界、专用文档与场外操作 |
 | [计时器](guides/timer.md) | 人类启动终端计时器，LLM 只读查询总用时 |
 
 比赛命令见 [项目 README](../README.md#构建和比赛)；观看与导出回放见 [回放说明](reference/replay.md)。
@@ -36,13 +37,13 @@
 - [自动测评机](design/specs/2026-10-13-tournament-design.md)
 - [总用时计时器](design/specs/2026-10-13-session-timer-design.md)
 
-正在实现的设计：
+新完成的设计：
 
 - [参赛题包](design/specs/2026-10-15-contest-kit-design.md)：外层组织者材料、内层参赛内容、LLM 时限与披露边界。
 
 ## 实施计划 `plans/`
 
-计划保留任务拆分、验收要求和实施证据。参赛题包正在实现，其余计划已完成：
+计划保留任务拆分、验收要求和实施证据。参赛题包正在完成最终审查，其余计划已完成：
 
 - [首个可运行版本](plans/2026-10-13-playable-v1.md)
 - [播放器改进](plans/2026-10-13-viewer-usability.md)
@@ -66,6 +67,7 @@
 
 - [基准 AI 首版实测](reports/evaluation-2026-10-13.md)：旧地图上的对照结果。
 - [地图 v2 与 20 分终局标定](reports/map-balance-2026-10-13.md)：当前默认地图的标定与位置偏好。
+- [参赛题包验收](reports/contest-kit-2026-10-15.md)：独立编译、对战、自测与回放验收。
 - [七张地图概览](assets/maps-v2.svg)：报告和参考文档共用的图示。
 
 ## 文档维护

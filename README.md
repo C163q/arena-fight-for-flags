@@ -76,6 +76,16 @@ python3 scripts/tournament.py run runs/tournament-new
 
 示例覆盖 2–8 人、每种人数 5 个种子，共 990 场；可用 `--mode quick --repeats 1` 先跑 35 场，或 `--only 8p` 只选择 8 人名单。查看输出目录 `report.md`；排名只使用完整换位组，不合并不同人数/名单。详见 [测评机说明](docs/guides/tournament.md)。
 
+## 参赛题包
+
+为外部程序员或 LLM 一键生成独立参赛材料：
+
+```sh
+python3 scripts/package_contest.py
+```
+
+输出 `dist/contest-kit/`，包含场外人员 README、`fff-timer` 和 `participant.tar.gz`；仅将压缩包分发给参赛者。压缩包使用 release 裁判/基准二进制，只提供 C 头文件与专用接口文档，并附自测与离线回放工具。LLM 时限 60 分钟，70 分钟由场外人员强制结束并收取已有编译结果。生成与维护约定见 [题包说明](docs/guides/contest-kit.md)。
+
 ## 文档与检查
 
 AI 设计/编码阶段可使用独立的总用时计时器。人类手动运行 `target/release/fff-timer`，LLM 运行 `target/release/fff-timer-query` 只查询一行 `HH:MM:SS`。计时器全局单例，终端支持大字与缩小回退，非终端静默计时；退出后重新归零，到达 `99:59:59` 保持上限。构建命令为 `cargo build --release -p fff-session-timer`；详见 [计时器说明](docs/guides/timer.md)。

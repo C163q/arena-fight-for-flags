@@ -30,18 +30,18 @@
 **Files:** 创建 `scripts/package_contest.py`、`packaging/contest/`、`tests/test_contest_package.py`；修改 `.gitignore`。
 **Interfaces:** `assemble(root: Path, artifacts: Path, output: Path, build_info: dict) -> Path` 负责已构建产物的白名单组装；`main()` 唯一正式入口始终执行 release 构建。
 
-- [ ] 写文件集/哈希/权限/独立配置、重复输出拒绝、缺失产物/链接拒绝与失败清理测试；首次运行证明缺失打包器失败。
-- [ ] 实现打包器、独立文档、模板和配置；关闭调试信息，去除可移除符号，记录平台与构建信息。
-- [ ] 单测与既有 Python 单测通过；提交。
+- [x] 写文件集/哈希/权限/独立配置、重复输出拒绝、缺失产物/链接拒绝与失败清理测试；首次运行证明缺失打包器失败。
+- [x] 实现打包器、独立文档、模板和配置；关闭调试信息，去除可移除符号，记录平台与构建信息。
+- [x] 单测与既有 Python 单测通过；提交。
 
 ### Task 2: 独立真实验收与维护文档
 
 **Files:** 创建 `tests/contest_package_integration.py`、`docs/guides/contest-kit.md`；更新 README/AGENTS/导航/设计状态。
 **Interfaces:** 消费 Task 1 的外层目录，从 tarball 在 /tmp 解压，使用 `bin/`、`include/`、`config/` 和 `viewer/`。
 
-- [ ] 创建真实验收脚本：只用头文件构建候选库；2–8 人生成赛程；双人完整换位块运行、恢复报告和回放验证/导出；只读查询，不启动计时。
-- [ ] 运行正式打包与独立验收，排除硬编码仓库路径；手工核对完整 API、LLM 时限和竞争要求。
-- [ ] 文档记录生成、维护、披露规则和实际验收；相关单测、地图一致性、链接、fmt/clippy 检查通过；提交。
+- [x] 创建真实验收脚本：只用头文件构建候选库；2–8 人生成赛程；双人完整换位块运行、恢复报告和回放验证/导出；只读查询，不启动计时。
+- [x] 运行正式打包与独立验收，排除硬编码仓库路径；手工核对完整 API、LLM 时限和竞争要求。
+- [x] 文档记录生成、维护、披露规则和实际验收；相关单测、地图一致性、链接、fmt/clippy 检查通过；提交。
 
 ### Task 3: 独立审查与交付
 
