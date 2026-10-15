@@ -36,19 +36,21 @@
 - [自动测评机](design/specs/2026-10-13-tournament-design.md)
 - [总用时计时器](design/specs/2026-10-13-session-timer-design.md)
 
-待确认的设计：
+正在实现的设计：
 
 - [参赛题包](design/specs/2026-10-15-contest-kit-design.md)：外层组织者材料、内层参赛内容、LLM 时限与披露边界。
 
 ## 实施计划 `plans/`
 
-以下计划均已完成，保留任务拆分、验收要求和实施证据：
+计划保留任务拆分、验收要求和实施证据。参赛题包正在实现，其余计划已完成：
 
 - [首个可运行版本](plans/2026-10-13-playable-v1.md)
 - [播放器改进](plans/2026-10-13-viewer-usability.md)
 - [地图与数值调整](plans/2026-10-13-map-balance.md)
 - [自动测评机](plans/2026-10-13-tournament.md)
 - [总用时计时器](plans/2026-10-14-session-timer.md)
+
+- [参赛题包](plans/2026-10-15-contest-kit.md)
 
 ## 审查记录 `reviews/`
 
