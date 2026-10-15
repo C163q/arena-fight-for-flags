@@ -64,7 +64,7 @@ def main():
         grouped[(row["players"], row["opponent"])].append(row)
     lines = ["# 基准 AI 首版实测", "", f"评测时间 UTC：{meta['utc']}。构建：release；CPU：{cpu}；系统：{meta['platform']}。",
              f"来源提交：`{meta['git_commit']}`；各 AI 二进制 SHA-256、实际地图/配置、逐队耗时和原始比赛目录保存在 `{args.out}/report.json`。", "",
-             "全部比赛经过同一 C ABI、串行 worker、50ms 预算和标准记录器，随后重新执行引擎验证回放。双队集合使用种子 0–5 并交换出生槽；对等待 AI 使用种子 0–1；3–8 队使用种子 17、候选 AI 轮换全部出生槽，其余均为贪心 AI。", "",
+             "全部比赛经过同一 C ABI、串行 worker、比赛首回合 250ms/后续 50ms 预算和标准记录器，随后重新执行引擎验证回放。双队集合使用种子 0–5 并交换出生槽；对等待 AI 使用种子 0–1；3–8 队使用种子 17、候选 AI 轮换全部出生槽，其余均为贪心 AI。", "",
              "| 队伍数 | 对照 | 场次 | 胜/平/负 | 平均分差（候选减最高对手） | 候选耗时 P50/P95/P99（µs） | AI 故障 / 非法动作（全部队伍） |",
              "| --- | --- | --- | --- | --- | --- | --- |"]
     for (players, opponent), group in sorted(grouped.items()):

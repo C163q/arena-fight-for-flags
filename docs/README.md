@@ -45,7 +45,7 @@
 
 以下计划均已完成，保留任务拆分、验收要求和实施证据：
 
-当前实施：[首回合预算与地图 v3](plans/2026-10-15-arena-v3.md)。
+- [首回合预算与地图 v3](plans/2026-10-15-arena-v3.md)
 
 - [首个可运行版本](plans/2026-10-13-playable-v1.md)
 - [播放器改进](plans/2026-10-13-viewer-usability.md)
@@ -59,6 +59,7 @@
 
 记录独立审查发现、修复、回归证据与审查范围：
 
+- [首回合预算与地图 v3 审查](reviews/arena-v3-review-2026-10-15.md)
 - [参赛题包审查](reviews/contest-kit-review-2026-10-15.md)
 - [首版独立审查](reviews/review-2026-10-13.md)
 - [自动测评机审查](reviews/tournament-review-2026-10-13.md)
