@@ -70,6 +70,7 @@
 
 记录独立审查发现、修复、回归证据与审查范围：
 
+- [千分制显示审查](reviews/score-presentation-2026-10-16.md)
 - [多 AI、多地图测评审查](reviews/league-review-2026-10-16.md)
 - [本机并发容量审查](reviews/jobs-capacity-review-2026-10-15.md)
 - [测评机并行自测审查](reviews/tournament-jobs-review-2026-10-15.md)
@@ -84,6 +85,7 @@
 
 报告结论仅适用于记录中的地图、AI、配置和样本；原始对局数据保留在本地 `runs/`，不随文档迁移。
 
+- [千分制显示验收](reports/score-presentation-2026-10-16.md)：兼容字段、原记录重建与新题包。
 - [三份参赛提交统一评测](reports/submissions-2026-10-16.md)：三份冻结提交、当前地图与串行均衡对抗。
 - [参赛题包独立实现体验](reports/contest-kit-selftrial-2026-10-16.md)：限时开发、接入与迭代体验，明确已有知识的影响。
 - [多 AI、多地图测评实测](reports/league-2026-10-16.md)：测评工具自身的兼容性、真实执行与交付验收。
