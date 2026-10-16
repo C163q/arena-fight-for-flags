@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "runner": "../target/release/fff-runner",
+  "repeats": 1,
+  "participants": [
+    {"id": "baseline", "name": "基准", "library": "../target/release/libfff_bot_baseline.so"},
+    {"id": "greedy", "name": "贪心", "library": "../target/release/libfff_bot_greedy.so"},
+    {"id": "wait", "name": "等待", "library": "../target/release/libfff_bot_wait.so"}
+  ],
+  "filler": {"name": "填充基准", "library": "../target/release/libfff_bot_baseline.so"},
+  "maps": [
+    {"id": "2p", "map": "../maps/arena_2p.ron"},
+    {"id": "4p", "map": "../maps/arena_4p.ron"},
+    {"id": "8p", "map": "../maps/arena_8p.ron"}
+  ]
+}

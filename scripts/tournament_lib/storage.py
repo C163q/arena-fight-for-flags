@@ -190,7 +190,7 @@ def load_plan(root):
         if sha(root/'plan.json') != (root/'plan.sha256').read_text().strip():
             raise ValueError('plan fingerprint mismatch')
         plan = read_json(root/'plan.json')
-        if plan['version'] != 1:
+        if plan['version'] not in (1, 2) or (plan['version'] == 2 and plan.get('kind') != 'league'):
             raise ValueError('unsupported plan version')
         for item in plan['ais'] + plan['groups']:
             if sha(snapshot_path(root,item['path'])) != item['sha256']:

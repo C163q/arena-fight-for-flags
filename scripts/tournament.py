@@ -37,6 +37,8 @@ def main():
         raise KeyboardInterrupt
     signal.signal(signal.SIGTERM,interrupted)
     try:
+        if hasattr(args,'root') and load_plan(args.root)['version'] != 1:
+            raise ValueError('use league.py for version=2 league plans')
         if args.command == 'plan':
             plan = create_plan(args.config,args.out,args.mode,args.repeats,args.only)
             print(json.dumps({'planned_matches':len(plan['matches']),'mode':plan['mode'],'repeats':plan['repeats'],
