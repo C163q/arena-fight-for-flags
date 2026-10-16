@@ -5,6 +5,21 @@ use fff_replay::{AiInfo, Recorder, Summary};
 use sha2::{Digest, Sha256};
 use std::io::Read;
 fn run() -> Result<(), String> {
+    if std::env::args_os()
+        .nth(1)
+        .is_some_and(|s| s == "inspect-map")
+    {
+        let args = std::env::args_os().collect::<Vec<_>>();
+        if args.len() != 3 {
+            return Err("usage: fff-runner inspect-map MAP.ron".into());
+        }
+        let map = MapDefinition::load(std::path::Path::new(&args[2]))?;
+        println!(
+            "{}",
+            serde_json::to_string(&map).map_err(|e| e.to_string())?
+        );
+        return Ok(());
+    }
     if std::env::args_os().nth(1).is_some_and(|s| s == "verify") {
         let args = std::env::args_os().collect::<Vec<_>>();
         if args.len() != 3 {

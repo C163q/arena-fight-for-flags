@@ -1,4 +1,34 @@
 use std::{path::Path, process::Command};
+#[test]
+fn inspect_map_validates_without_ai_or_worker() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    for players in 2..=8 {
+        let output = Command::new(env!("CARGO_BIN_EXE_fff-runner"))
+            .arg("inspect-map")
+            .arg(root.join(format!("maps/arena_{players}p.ron")))
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let map: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+        assert_eq!(map["players"], players);
+    }
+    for args in [
+        vec!["inspect-map"],
+        vec!["inspect-map", "missing.ron"],
+        vec!["inspect-map", "x", "y"],
+    ] {
+        let output = Command::new(env!("CARGO_BIN_EXE_fff-runner"))
+            .args(args)
+            .output()
+            .unwrap();
+        assert!(!output.status.success());
+        assert!(output.stdout.is_empty());
+    }
+}
 fn map_with_limit(path: &Path, turns: u32) -> String {
     let map = fff_engine::MapDefinition::load(path).unwrap();
     std::fs::read_to_string(path).unwrap().replace(
