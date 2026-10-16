@@ -34,6 +34,7 @@
 
 已完成功能的设计稿保存在 `design/specs/`，当前使用方式和实际边界以指南、参考规范为准：
 
+- [千分制显示设计](design/specs/2026-10-16-score-presentation.md)
 - [多 AI、多地图测评设计](design/specs/2026-10-16-league-design.md)
 - [本机并发容量测量](design/specs/2026-10-15-jobs-capacity-design.md)
 - [测评机并行自测](design/specs/2026-10-15-tournament-jobs-design.md)
@@ -49,6 +50,7 @@
 
 计划记录任务拆分、验收要求和实施证据；进度以各文件为准：
 
+- [千分制显示](plans/2026-10-16-score-presentation.md)
 - [多 AI、多地图测评](plans/2026-10-16-league.md)
 - [本机并发容量测量](plans/2026-10-15-jobs-capacity.md)
 - [测评机并行自测](plans/2026-10-15-tournament-jobs.md)

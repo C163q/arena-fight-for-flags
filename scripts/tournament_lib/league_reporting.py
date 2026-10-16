@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from fractions import Fraction
 import io
 import random
-from .reporting import BOOTSTRAP_SEED, md, percentiles, points
+from .reporting import BOOTSTRAP_SEED, SCORE_SCALE, display_score, md, percentiles, points, score_fields
 from .storage import atomic_json, atomic_text, sha
 
 
@@ -61,8 +61,10 @@ def summarize(aid, name, n, rows, bids):
         local = [(r,s) for r,s in games if s==slot]
         item['by_slot'].append({'slot':slot,'matches':len(local),
             'mean_score':sum(r['summary']['scores'][s] for r,s in local)/len(local),
-            'rank_score':sum(points(r['summary']['scores'],s) for r,s in local)/(len(local)*2*(n-1))})
+            'rank_score':sum(points(r['summary']['scores'],s) for r,s in local)/(len(local)*2*(n-1)),
+            'score':display_score(Fraction(sum(points(r['summary']['scores'],s) for r,s in local),len(local)*2*(n-1)))})
     key = (Fraction(point_sum,count*2*(n-1)),Fraction(score_sum,count),Fraction(sole,count))
+    item.update(score_fields(key[0],item['rank_score_ci95']))
     return item,key
 
 
@@ -85,7 +87,7 @@ def build_results(plan, rows):
     complete = {bid for bid,mids in by_block.items() if mids<=seen}
     names = {a['id']:a['name'] for a in plan['ais']}
     participants = plan['participants']
-    result = {'version':2,'kind':'league','generated_utc':datetime.now(timezone.utc).isoformat(),
+    result = {'version':2,'kind':'league','score_scale':SCORE_SCALE,'generated_utc':datetime.now(timezone.utc).isoformat(),
         'execution':{'jobs_used':jobs,'classification':'parallel_self_test' if any(j>1 for j in jobs) else 'serial','formal_jobs':1},
         'environment':plan['environment'],'completed_matches':len(rows),'planned_matches':len(plan['matches']),
         'bootstrap':{'seed':BOOTSTRAP_SEED,'resamples':2000,'minimum_blocks':5,'unit':'complete map block / complete all-map repetition'},
@@ -121,13 +123,14 @@ def build_results(plan, rows):
                'map_weighting':'equal','standings':[]}
     keys = {}
     for aid in participants if global_repeats else []:
-        values,by_map,matches = [],{},0
+        values,by_map,by_map_score,matches = [],{},{},0
         for g,output in zip(plan['groups'],result['groups']):
             item = next(x for x in output['standings'] if x['id']==aid)
             selected = [b for b in plan['blocks'] if b['group']==g['id'] and b['repeat'] in global_repeats]
             local = [item['by_block'][b['id']] for b in selected]
             score = sum((Fraction(v['points'],v['denominator']) for v in local),Fraction())/len(local)
             by_map[g['id']] = float(score)
+            by_map_score[g['id']] = display_score(score)
             matches += sum(v['matches'] for v in local)
         for repeat in global_repeats:
             local = []
@@ -138,8 +141,10 @@ def build_results(plan, rows):
             values.append(sum(local,Fraction())/len(local))
         value = sum(values,Fraction())/len(values)
         keys[aid] = (value,)
+        ci = interval([float(v) for v in values])
         overall['standings'].append({'id':aid,'name':names[aid],'matches':matches,'rank_score':float(value),
-            'by_map':by_map,'complete_repeats':len(global_repeats),'rank_score_ci95':interval([float(v) for v in values])})
+            'by_map':by_map,'by_map_score':by_map_score,'complete_repeats':len(global_repeats),'rank_score_ci95':ci,
+            **score_fields(value,ci)})
     rank(overall['standings'],keys)
     result['overall'] = overall
     return result
@@ -155,22 +160,23 @@ def write_reports(root, plan, rows):
         '正式评测固定 --jobs 1；含并行场次（包括不完整组）的报告均为自测，串行续跑不清除标记。',
         f"计划 SHA-256：`{result['plan_sha256']}`。",'',
         '主指标为归一化名次分：战胜对手计 1、同分计 0.5，再除以场内对手数，含填充对手。填充队不入榜。',
+        '积分与区间采用千分制（满分 1000），四舍五入到整数；排序使用未取整值，显示同分不一定并列。平均夺旗分不缩放。',
         '总榜各地图等权，仅采用所有指定地图均完整的重复组；每图榜可使用该图的其他完整块。两两均衡不保证三方组合公平。',
         '少于 5 个完整统计单位不提供区间；区间为按完整块/全图组重采样的描述性 95% 区间，不保证普适显著性。','']
     stream = io.StringIO(newline='')
     fields = ['execution_classification','execution_jobs_used','scope','group','players','rank','id','name','matches',
-              'complete_blocks','complete_repeats','rank_score','mean_score','sole_win_rate','ai_failures','timeouts','illegal_actions']
+              'complete_blocks','complete_repeats','score','rank_score','mean_score','sole_win_rate','ai_failures','timeouts','illegal_actions']
     writer = csv.DictWriter(stream,fieldnames=fields,extrasaction='ignore')
     writer.writeheader()
     def table(items,scope,group='',players=''):
         if not items:
             lines.extend(['暂无正式排名：尚无完整统计单位。',''])
             return
-        lines.extend(['| 名次 | AI | 出场数 | 名次分 | 95% 区间 |','| --- | --- | --- | --- | --- |'])
+        lines.extend(['| 名次 | AI | 出场数 | 积分（千分制）| 95% 区间 |','| --- | --- | --- | --- | --- |'])
         for x in items:
-            ci = x['rank_score_ci95']
-            label = f'{ci[0]:.4f}–{ci[1]:.4f}' if ci else '完整单位不足 5'
-            lines.append(f"| {x['rank']} | {md(x['name'])} (`{x['id']}`) | {x['matches']} | {x['rank_score']:.4f} | {label} |")
+            ci = x['score_ci95']
+            label = f'{ci[0]}–{ci[1]}' if ci else '完整单位不足 5'
+            lines.append(f"| {x['rank']} | {md(x['name'])} (`{x['id']}`) | {x['matches']} | {x['score']} | {label} |")
             writer.writerow(dict(x,scope=scope,group=group,players=players,
                                  execution_classification=classification,execution_jobs_used=jobs))
         lines.append('')
@@ -185,9 +191,9 @@ def write_reports(root, plan, rows):
         for x in g['standings']:
             timing = '/'.join(str(x['elapsed_us'][p]) for p in ('p50','p95','p99'))
             lines.append(f"| `{x['id']}` | {x['mean_score']:.3f} | {x['sole_wins']} / {x['joint_firsts']} | {x['ai_failures']} / {x['timeouts']} / {x['illegal_actions']} | {timing} |")
-        lines.extend(['','出生位成绩（team_id：名次分 / 场数）：',''])
+        lines.extend(['','出生位成绩（team_id：千分制积分 / 场数）：',''])
         for x in g['standings']:
-            lines.append(f"- `{x['id']}`："+'，'.join(f"{s['slot']}：{s['rank_score']:.3f} / {s['matches']}" for s in x['by_slot']))
+            lines.append(f"- `{x['id']}`："+'，'.join(f"{s['slot']}：{s['score']} / {s['matches']}" for s in x['by_slot']))
         lines.extend(['','混战两两成绩（胜/平/负，括号为同场样本数），不是独立 1v1 胜率：','',
             '| AI | '+' | '.join(f'`{a}`' for a in plan['participants'])+' |',
             '| --- | '+' | '.join('---' for _ in plan['participants'])+' |'])
