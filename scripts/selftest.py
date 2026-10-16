@@ -21,10 +21,18 @@ def main():
         p.add_argument('--seed-file',type=Path);p.add_argument('--max-matches',type=int);p.add_argument('--match-limit',type=int,default=10000)
     p=sub.add_parser('resume',help='continue frozen inputs, preserving prior concurrency provenance')
     p.add_argument('root',type=Path);p.add_argument('--jobs',type=int,default=1);p.add_argument('--max-matches',type=int)
+    p=sub.add_parser('check',help='short real-worker environment and ABI preflight')
+    p.add_argument('--ai',type=Path,default=Path('submission/libteam.so'));p.add_argument('--runner',type=Path)
+    p.add_argument('--opponent',type=Path,help='known-good baseline control library')
+    p.add_argument('--map',type=Path);p.add_argument('--out',type=Path,required=True)
     args=parser.parse_args()
     def interrupted(_signum,_frame):raise KeyboardInterrupt
     signal.signal(signal.SIGTERM,interrupted)
     try:
+        if args.command=='check':
+            from contest_lib.preflight import check_ai
+            result=check_ai(args.ai,args.runner,args.opponent,args.map,args.out)
+            print(json.dumps(result,ensure_ascii=False));return 0 if result['passed'] else 1
         if args.jobs<1 or args.max_matches is not None and args.max_matches<1:raise ValueError('jobs/max-matches must be positive')
         if args.command=='resume':result=resume_suite(args.root,args.jobs,args.max_matches)
         else:
