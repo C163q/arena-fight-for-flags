@@ -25,35 +25,31 @@
 
 ## 架构与设计 `design/`
 
-- [多 AI、多地图测评设计](design/specs/2026-10-16-league-design.md)
-
 | 文档 | 用途 |
 | --- | --- |
 | [系统架构](design/architecture.md) | 当前模块边界、进程管理与数据流 |
 | [设计决策](design/decisions.md) | 已接受的方案及用户确认来源 |
 | [交付状态与路线图](design/roadmap.md) | 交付情况和后续方向 |
-
-- [本机并发容量测量](design/specs/2026-10-15-jobs-capacity-design.md)
-- [测评机并行自测](design/specs/2026-10-15-tournament-jobs-design.md)
-- [计时查询 PID 命名空间兼容](design/specs/2026-10-15-timer-pidns-design.md)
+| [参赛题包改进准备](design/contest-kit-improvements.md) | 基于体验与对抗的候选改进、验收边界；尚未实施 |
 
 已完成功能的设计稿保存在 `design/specs/`，当前使用方式和实际边界以指南、参考规范为准：
 
+- [多 AI、多地图测评设计](design/specs/2026-10-16-league-design.md)
+- [本机并发容量测量](design/specs/2026-10-15-jobs-capacity-design.md)
+- [测评机并行自测](design/specs/2026-10-15-tournament-jobs-design.md)
+- [计时查询 PID 命名空间兼容](design/specs/2026-10-15-timer-pidns-design.md)
 - [首回合预算与地图 v3](design/specs/2026-10-15-arena-v3-design.md)：首回合预算、旗点运输距离与标定。
-
+- [参赛题包](design/specs/2026-10-15-contest-kit-design.md)：外层组织者材料、内层参赛内容、LLM 时限与披露边界。
 - [播放器改进](design/specs/2026-10-13-viewer-usability-design.md)
 - [地图与数值标定](design/specs/2026-10-13-map-balance-design.md)
 - [自动测评机](design/specs/2026-10-13-tournament-design.md)
 - [总用时计时器](design/specs/2026-10-13-session-timer-design.md)
 
-- [参赛题包](design/specs/2026-10-15-contest-kit-design.md)：外层组织者材料、内层参赛内容、LLM 时限与披露边界。
-
 ## 实施计划 `plans/`
-
-- [多 AI、多地图测评](plans/2026-10-16-league.md)
 
 计划记录任务拆分、验收要求和实施证据；进度以各文件为准：
 
+- [多 AI、多地图测评](plans/2026-10-16-league.md)
 - [本机并发容量测量](plans/2026-10-15-jobs-capacity.md)
 - [测评机并行自测](plans/2026-10-15-tournament-jobs.md)
 
@@ -70,10 +66,9 @@
 
 ## 审查记录 `reviews/`
 
-- [多 AI、多地图测评审查](reviews/league-review-2026-10-16.md)
-
 记录独立审查发现、修复、回归证据与审查范围：
 
+- [多 AI、多地图测评审查](reviews/league-review-2026-10-16.md)
 - [本机并发容量审查](reviews/jobs-capacity-review-2026-10-15.md)
 - [测评机并行自测审查](reviews/tournament-jobs-review-2026-10-15.md)
 - [计时查询 PID 命名空间审查](reviews/timer-pidns-review-2026-10-15.md)
@@ -85,10 +80,11 @@
 
 ## 实测报告 `reports/`
 
-- [多 AI、多地图测评实测](reports/league-2026-10-16.md)
-
 报告结论仅适用于记录中的地图、AI、配置和样本；原始对局数据保留在本地 `runs/`，不随文档迁移。
 
+- [三份参赛提交统一评测](reports/submissions-2026-10-16.md)：三份冻结提交、当前地图与串行均衡对抗。
+- [参赛题包独立实现体验](reports/contest-kit-selftrial-2026-10-16.md)：限时开发、接入与迭代体验，明确已有知识的影响。
+- [多 AI、多地图测评实测](reports/league-2026-10-16.md)：测评工具自身的兼容性、真实执行与交付验收。
 - [本机并发容量实测](reports/jobs-capacity-2026-10-15.md)：512场、建议8并发与实测边界。
 - [测评机并行自测实测](reports/tournament-jobs-2026-10-15.md)：并发、清理、91 场完整验收与新题包。
 - [基准 AI 首版实测](reports/evaluation-2026-10-13.md)：旧地图上的对照结果。

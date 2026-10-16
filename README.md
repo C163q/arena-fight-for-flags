@@ -90,6 +90,8 @@ python3 scripts/package_contest.py
 
 输出 `dist/contest-kit/`，包含场外人员 README、`fff-timer` 和 `participant.tar.gz`；仅将压缩包分发给参赛者。压缩包使用 release 裁判/基准二进制，只提供 C 头文件与专用接口文档，并附自测与离线回放工具。LLM 时限 60 分钟，70 分钟由场外人员强制结束并收取已有编译结果。生成与维护约定见 [题包说明](docs/guides/contest-kit.md)。
 
+当前流程的实测见 [参赛体验](docs/reports/contest-kit-selftrial-2026-10-16.md) 与 [三份提交统一评测](docs/reports/submissions-2026-10-16.md)。后续候选改进及验收边界集中在 [准备清单](docs/design/contest-kit-improvements.md)，其中功能尚未实施。
+
 ## 文档与检查
 
 AI 设计/编码阶段可使用独立的总用时计时器。人类手动运行 `target/release/fff-timer`，LLM 运行 `target/release/fff-timer-query` 只查询一行 `HH:MM:SS`。计时器全局单例，终端支持大字与缩小回退，非终端静默计时；退出后重新归零，到达 `99:59:59` 保持上限。构建命令为 `cargo build --release -p fff-session-timer`；详见 [计时器说明](docs/guides/timer.md)。
