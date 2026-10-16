@@ -75,3 +75,5 @@
 总用时计时器见 [说明](docs/guides/timer.md)：人类手动启动 `fff-timer`，LLM 仅使用 `fff-timer-query` 读取。查询器不获取/释放锁、不写状态、不发控制信号；不得加入启动、停止、暂停、重置、改路径或预设时间的入口。正式路径固定在共享 `/tmp`，不能以环境变量绕开单例；兼容 PID 命名空间时以原子锁区间快照和稳定发布记录校验会话，不比较记录 PID 与命名空间相对锁 PID；内外仍须共享状态 inode 与时钟基准；不要删除运行中实例的状态 inode。修改时验证 Rust 单测及 `tests/timer_integration.py`，只清理测试自己启动的进程，不能干扰人类既有计时器。涉及锁/发布校验时额外运行 `tests/timer_publication_race.py`，该测试仅使用私有状态文件并要求真实 PID 命名空间。
 
 参赛题包见 [说明](docs/guides/contest-kit.md)。仅使用显式文件白名单和独立参赛文档模板，不将仓库源码或内部 docs 复制进 tarball；游戏程序与基准只发 release 二进制，接入材料只提供 C 头文件和完整接口文档。LLM 60/70 分钟要求同时出现在外层和内层 README，计时由场外人员控制。修改后验证 `tests/test_contest_package.py` 和仓库外 `tests/contest_package_integration.py`；产物放在忽略的 `dist/`，不提交二进制。
+
+多 AI、多地图评测见 [说明](docs/guides/league.md)：新配置/计划 version=2，旧固定名单 version=1 保持兼容。新增赛程须验证实际候选出场、出生位、两两同场与有序位置对精确均衡；总榜只采用完整全图重复组，各地图等权。填充队不入榜，候选统计只按实际出场。修改时运行 league Python 单测与 `tests/league_integration.py`；共用执行器/loader 变更同时验证原 tournament 验收和父进程清理。league 当前仅用于场外编排，不自动扩大参赛题包白名单。

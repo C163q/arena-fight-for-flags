@@ -70,6 +70,8 @@
 
 ## 审查记录 `reviews/`
 
+- [多 AI、多地图测评审查](reviews/league-review-2026-10-16.md)
+
 记录独立审查发现、修复、回归证据与审查范围：
 
 - [本机并发容量审查](reviews/jobs-capacity-review-2026-10-15.md)
@@ -82,6 +84,8 @@
 - [计时器审查](reviews/timer-review-2026-10-14.md)
 
 ## 实测报告 `reports/`
+
+- [多 AI、多地图测评实测](reports/league-2026-10-16.md)
 
 报告结论仅适用于记录中的地图、AI、配置和样本；原始对局数据保留在本地 `runs/`，不随文档迁移。
 
