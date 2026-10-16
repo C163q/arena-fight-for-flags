@@ -34,6 +34,7 @@
 
 已完成功能的设计稿保存在 `design/specs/`，当前使用方式和实际边界以指南、参考规范为准：
 
+- [参赛开发工具改进设计](design/specs/2026-10-16-contest-tools-design.md)：预检、小规模自测、固定条件版本比较、摘要与归档；待审阅、尚未实施。
 - [千分制显示设计](design/specs/2026-10-16-score-presentation.md)
 - [多 AI、多地图测评设计](design/specs/2026-10-16-league-design.md)
 - [本机并发容量测量](design/specs/2026-10-15-jobs-capacity-design.md)
@@ -85,6 +86,7 @@
 
 报告结论仅适用于记录中的地图、AI、配置和样本；原始对局数据保留在本地 `runs/`，不随文档迁移。
 
+- [地图竞技位置表现复核](reports/map-competition-2026-10-16.md)：既有三策略结果中的出生位差异，不修改地图。
 - [千分制显示验收](reports/score-presentation-2026-10-16.md)：兼容字段、原记录重建与新题包。
 - [三份参赛提交统一评测](reports/submissions-2026-10-16.md)：三份冻结提交、当前地图与串行均衡对抗。
 - [参赛题包独立实现体验](reports/contest-kit-selftrial-2026-10-16.md)：限时开发、接入与迭代体验，明确已有知识的影响。
