@@ -17,7 +17,7 @@ import tempfile
 
 TARGET = 'x86_64-unknown-linux-gnu'
 BINARIES = ('fff-runner', 'fff-ai-worker', 'fff-timer-query')
-TOURNAMENT_FILES = ('__init__.py', 'execution.py', 'launch.py', 'reporting.py', 'schedule.py', 'storage.py')
+TOURNAMENT_FILES = ('__init__.py', 'execution.py', 'launch.py', 'reporting.py', 'schedule.py', 'storage.py', 'seeds.py')
 VIEWER_FILES = ('export.py', 'schema.py', 'index.html', 'player.css', 'player.js')
 DOC_FILES = ('README.md', 'docs/rules.md', 'docs/api.md', 'docs/testing.md', 'docs/replay.md')
 

@@ -1,6 +1,8 @@
 """Validated configuration, immutable inputs, atomic metadata and output locking."""
 from contextlib import contextmanager
 from datetime import datetime, timezone
+import ctypes
+import errno
 import fcntl
 import hashlib
 import json
@@ -13,6 +15,7 @@ import secrets
 import shutil
 import tempfile
 from .schedule import permutations_for, coverage
+from .seeds import validate_seed_spec
 
 
 def read_json(path):
@@ -85,8 +88,31 @@ def snapshot_path(root, value):
     return path
 
 
-def create_plan(config_path, out, mode=None, repeats=None, only=None):
-    config_path, out = Path(config_path).resolve(), Path(out).resolve()
+def publish_path(source,target):
+    """Linux atomic no-replace publication for files and directories."""
+    libc=ctypes.CDLL(None,use_errno=True)
+    rename=libc.renameat2
+    rename.argtypes=[ctypes.c_int,ctypes.c_char_p,ctypes.c_int,ctypes.c_char_p,ctypes.c_uint]
+    rename.restype=ctypes.c_int
+    if rename(-100,os.fsencode(source),-100,os.fsencode(target),1)!=0:
+        code=ctypes.get_errno()
+        if code==errno.EEXIST:raise ValueError(f'output already exists: {target}')
+        raise OSError(code,os.strerror(code),str(target))
+
+
+@contextmanager
+def staged_directory(out):
+    out=Path(out).absolute()
+    if os.path.lexists(out):raise ValueError(f'output already exists: {out}')
+    out.parent.mkdir(parents=True,exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix='.'+out.name+'-',dir=out.parent) as temporary:
+        stage=Path(temporary)/'content';stage.mkdir()
+        yield stage
+        publish_path(stage,out)
+
+
+def create_plan(config_path, out, mode=None, repeats=None, only=None, seed_spec=None):
+    config_path, out = Path(config_path).resolve(), Path(out).absolute()
     cfg = read_json(config_path)
     if not isinstance(cfg, dict) or type(cfg.get('version')) is not int or cfg['version'] != 1:
         raise ValueError('configuration version must be 1')
@@ -129,59 +155,62 @@ def create_plan(config_path, out, mode=None, repeats=None, only=None):
         groups = [g for g in groups if g['id'] in only]
     used = {a for g in groups for a in g['ais']}
     ais = [a for a in ais if a['id'] in used]
-    if out.exists():
-        raise ValueError(f'output already exists: {out}')
-    out.mkdir(parents=True)
-    (out/'inputs/ais').mkdir(parents=True)
-    (out/'inputs/maps').mkdir(parents=True)
-    for item in ais + groups:
-        shutil.copyfile(item['source'], out/item['path'])
-        item['sha256'] = sha(out/item['path'])
-    roots = {kind:secrets.randbits(256) for kind in ('engine','ai','schedule')}
-    rngs = {kind:random.Random(seed) for kind,seed in roots.items()}
-    blocks, matches = [], []
-    used_seeds = {'engine':set(), 'ai':set()}
+    with staged_directory(out) as stage:
+        out=stage
+        (out/'inputs/ais').mkdir(parents=True)
+        (out/'inputs/maps').mkdir(parents=True)
+        for item in ais + groups:
+            shutil.copyfile(item['source'], out/item['path'])
+            item['sha256'] = sha(out/item['path'])
+        roots = {kind:secrets.randbits(256) for kind in ('engine','ai','schedule')}
+        if seed_spec is not None:
+            validate_seed_spec(seed_spec,groups,repeats)
+            roots['ai']=seed_spec['ai_seed_root'];roots['schedule']=seed_spec['schedule_seed_root']
+        rngs = {kind:random.Random(seed) for kind,seed in roots.items()}
+        blocks, matches = [], []
+        used_seeds = {'engine':set(), 'ai':set()}
 
-    def fresh(kind):
-        while True:
-            value = rngs[kind].getrandbits(64)
-            if value not in used_seeds[kind]:
-                used_seeds[kind].add(value)
-                return value
+        def fresh(kind):
+            while True:
+                value = rngs[kind].getrandbits(64)
+                if value not in used_seeds[kind]:
+                    used_seeds[kind].add(value)
+                    return value
 
-    for group in groups:
-        n = group['players']
-        for index in range(repeats):
-            bid = f"{group['id']}-b{index:03d}"
-            block = {'id':bid,'group':group['id'],'engine_seed':fresh('engine'),
-                     'ai_seeds':{a:fresh('ai') for a in group['ais']}}
-            ai_labels, slot_labels = group['ais'][:], list(range(n))
-            rngs['schedule'].shuffle(ai_labels)
-            rngs['schedule'].shuffle(slot_labels)
-            rows = permutations_for(n, mode)
-            rngs['schedule'].shuffle(rows)
-            realized = []
-            for number, row in enumerate(rows):
-                slots = [None]*n
-                for i, slot in enumerate(row):
-                    slots[slot_labels[slot]] = ai_labels[i]
-                realized.append(tuple(slots.index(a) for a in group['ais']))
-                matches.append({'id':f'{bid}-m{number:03d}','group':group['id'],'block':bid,
-                                'slots':slots,'engine_seed':block['engine_seed'],
-                                'ai_seeds':[block['ai_seeds'][a] for a in slots]})
-            block['coverage'] = coverage(realized)
-            if block['coverage']['single_min'] != block['coverage']['single_max'] or (mode == 'balanced' and (block['coverage']['pair_min'] == 0 or block['coverage']['pair_min'] != block['coverage']['pair_max'])):
-                raise ValueError('generated schedule failed balance check')
-            blocks.append(block)
-    plan = {'version':1,'created_utc':datetime.now(timezone.utc).isoformat(), 'mode':mode,'repeats':repeats,
-            'seed_roots':roots,'runner':{'path':str(runner),'sha256':sha(runner)},
-            'worker':{'path':str(worker),'sha256':sha(worker)},'ais':ais,'groups':groups,
-            'blocks':blocks,'matches':matches,'environment':{'platform':platform.platform(),'logical_cpus':os.cpu_count(),
-            'cpu':next((line.split(':',1)[1].strip() for line in Path('/proc/cpuinfo').read_text().splitlines() if line.startswith('model name')),platform.machine()),
-            'python':platform.python_version()},'config':cfg}
-    atomic_json(out/'plan.json', plan)
-    atomic_text(out/'plan.sha256', sha(out/'plan.json')+'\n')
-    return plan
+        for group in groups:
+            n = group['players']
+            for index in range(repeats):
+                bid = f"{group['id']}-b{index:03d}"
+                block = {'id':bid,'group':group['id'],'engine_seed':fresh('engine') if seed_spec is None else seed_spec['maps'][group['id']]['engine_seeds'][index],
+                         'ai_seeds':{a:fresh('ai') for a in group['ais']}}
+                ai_labels, slot_labels = group['ais'][:], list(range(n))
+                rngs['schedule'].shuffle(ai_labels)
+                rngs['schedule'].shuffle(slot_labels)
+                rows = permutations_for(n, mode)
+                rngs['schedule'].shuffle(rows)
+                realized = []
+                for number, row in enumerate(rows):
+                    slots = [None]*n
+                    for i, slot in enumerate(row):
+                        slots[slot_labels[slot]] = ai_labels[i]
+                    realized.append(tuple(slots.index(a) for a in group['ais']))
+                    matches.append({'id':f'{bid}-m{number:03d}','group':group['id'],'block':bid,
+                                    'slots':slots,'engine_seed':block['engine_seed'],
+                                    'ai_seeds':[block['ai_seeds'][a] for a in slots]})
+                block['coverage'] = coverage(realized)
+                if block['coverage']['single_min'] != block['coverage']['single_max'] or (mode == 'balanced' and (block['coverage']['pair_min'] == 0 or block['coverage']['pair_min'] != block['coverage']['pair_max'])):
+                    raise ValueError('generated schedule failed balance check')
+                blocks.append(block)
+        plan = {'version':1,'created_utc':datetime.now(timezone.utc).isoformat(), 'mode':mode,'repeats':repeats,
+                'seed_roots':roots,'runner':{'path':str(runner),'sha256':sha(runner)},
+                'worker':{'path':str(worker),'sha256':sha(worker)},'ais':ais,'groups':groups,
+                'blocks':blocks,'matches':matches,'environment':{'platform':platform.platform(),'logical_cpus':os.cpu_count(),
+                'cpu':next((line.split(':',1)[1].strip() for line in Path('/proc/cpuinfo').read_text().splitlines() if line.startswith('model name')),platform.machine()),
+                'python':platform.python_version()},'config':cfg}
+        if seed_spec is not None:plan['seed_spec']=seed_spec
+        atomic_json(out/'plan.json', plan)
+        atomic_text(out/'plan.sha256', sha(out/'plan.json')+'\n')
+        return plan
 
 
 def load_plan(root):

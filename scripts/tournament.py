@@ -6,7 +6,7 @@ import signal
 import sys
 from tournament_lib.execution import collect, run
 from tournament_lib.reporting import write_reports
-from tournament_lib.storage import create_plan, load_plan, locked
+from tournament_lib.storage import create_plan, load_plan, locked, read_json
 
 
 def report(root):
@@ -23,6 +23,7 @@ def main():
     plan.add_argument('--out',type=Path,required=True)
     plan.add_argument('--mode',choices=['balanced','quick'])
     plan.add_argument('--repeats',type=int)
+    plan.add_argument('--seed-file',type=Path,help='reuse explicit engine seeds and independent AI/schedule roots')
     plan.add_argument('--only',nargs='+',help='select lineup IDs from config')
     execute = sub.add_parser('run',help='run/resume; default serial, parallel jobs are for self-testing')
     execute.add_argument('root',type=Path)
@@ -40,7 +41,8 @@ def main():
         if hasattr(args,'root') and load_plan(args.root)['version'] != 1:
             raise ValueError('use league.py for version=2 league plans')
         if args.command == 'plan':
-            plan = create_plan(args.config,args.out,args.mode,args.repeats,args.only)
+            plan = create_plan(args.config,args.out,args.mode,args.repeats,args.only,
+                               read_json(args.seed_file) if args.seed_file else None)
             print(json.dumps({'planned_matches':len(plan['matches']),'mode':plan['mode'],'repeats':plan['repeats'],
                              'output':str(args.out.resolve()),'blocks':[{'id':b['id'],**b['coverage']} for b in plan['blocks']]},ensure_ascii=False,indent=2))
         elif args.command == 'run':
