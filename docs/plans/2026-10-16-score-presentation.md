@@ -24,4 +24,6 @@
 - [x] 实现纯显示换算及新字段，Markdown/CSV 使用千分制；全 Python 与 viewer 单测 GREEN。
 - [x] 同步文档和模板；读取原始记录重建 1010 场报告，核对原始分、排名、置信区间及比赛文件保持不变。
 - [x] 用既有真实比赛验证 league/旧 tournament 的报告重建；执行器未变，不重跑大规模执行验收。生成新 release 题包并执行仓库外题包验收；一次独立审查。
-- [ ] 记录证据、本地提交、集成并清理本次工作区。不推送。
+- [x] 记录证据、本地提交、集成并清理本次工作区。不推送。
+
+验收记录见 [报告](../reports/score-presentation-2026-10-16.md) 与 [独立审查](../reviews/score-presentation-2026-10-16.md)。本地 main 快进集成后再次通过 65 项 Python 和 8 项 viewer 单测；工作区与已合并功能分支已清理。执行证据保存在忽略的 `runs/score-presentation-20261016/inline-execution/`。
