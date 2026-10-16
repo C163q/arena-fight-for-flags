@@ -92,9 +92,16 @@ def locked_suite(root):
         yield suite,fds
 
 
-def suite_rows(root):
+def suite_rows(root,precheck=None):
     root=Path(root).resolve()
     with locked_suite(root) as (suite,fds):
+        if precheck is not None:
+            for v in suite['versions']:
+                plan_root=snapshot_path(root,v['plan'])
+                for manifest in plan_root.glob('matches/*/attempt-*/match/manifest.json'):
+                    data=read_json(manifest)
+                    if not isinstance(data,dict):raise ValueError(f'invalid manifest: {manifest}')
+                    if data.get('status')=='complete':precheck(manifest.parent)
         return [{'id':v['id'],'root':snapshot_path(root,v['plan']),'plan':load_plan(snapshot_path(root,v['plan'])),
                  'rows':collect(snapshot_path(root,v['plan']),load_plan(snapshot_path(root,v['plan'])),fds[v['id']])} for v in suite['versions']]
 

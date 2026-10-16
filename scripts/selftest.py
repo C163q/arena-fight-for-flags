@@ -25,10 +25,17 @@ def main():
     p.add_argument('--ai',type=Path,default=Path('submission/libteam.so'));p.add_argument('--runner',type=Path)
     p.add_argument('--opponent',type=Path,help='known-good baseline control library')
     p.add_argument('--map',type=Path);p.add_argument('--out',type=Path,required=True)
+    p=sub.add_parser('summary',help='verify public replay events and summarize without running AI')
+    p.add_argument('source',type=Path);p.add_argument('--out',type=Path,required=True)
+    p.add_argument('--runner',type=Path);p.add_argument('--estimate-matches',type=int)
     args=parser.parse_args()
     def interrupted(_signum,_frame):raise KeyboardInterrupt
     signal.signal(signal.SIGTERM,interrupted)
     try:
+        if args.command=='summary':
+            from contest_lib.summary import write_summary
+            result=write_summary(args.source,args.out,args.runner,args.estimate_matches)
+            print(json.dumps({'output':str(args.out),'matches':len(result['matches']),'disk':result['disk']},ensure_ascii=False));return 0
         if args.command=='check':
             from contest_lib.preflight import check_ai
             result=check_ai(args.ai,args.runner,args.opponent,args.map,args.out)

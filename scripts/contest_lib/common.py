@@ -12,23 +12,36 @@ ROOT=Path(__file__).resolve().parents[2]
 MAX_JSON=16*1024*1024
 
 
-def read_json(path,limit=MAX_JSON):
+def decode_json(data,label):
     def pairs(items):
         result={}
         for key,value in items:
-            if key in result:raise ValueError(f'{path}: duplicate JSON key {key}')
+            if key in result:raise ValueError(f'{label}: duplicate JSON key {key}')
             result[key]=value
         return result
+    def invalid(value):raise ValueError(f'{label}: invalid JSON constant {value}')
+    try:
+        return json.loads(data.decode('utf-8'),object_pairs_hook=pairs,parse_constant=invalid)
+    except (UnicodeError,json.JSONDecodeError,RecursionError) as error:
+        raise ValueError(f'{label}: {error}') from error
+
+
+def read_json(path,limit=MAX_JSON):
     try:
         fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
         with os.fdopen(fd,'rb') as stream:
             if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):raise ValueError(f'not a regular file: {path}')
             data=stream.read(limit+1)
         if len(data)>limit:raise ValueError(f'JSON size limit: {path}')
-        return json.loads(data.decode('utf-8'),object_pairs_hook=pairs,
-                          parse_constant=lambda x:(_ for _ in ()).throw(ValueError(f'invalid JSON constant: {x}')))
-    except (OSError,UnicodeError,json.JSONDecodeError) as error:
+        return decode_json(data,str(path))
+    except OSError as error:
         raise ValueError(f'{path}: {error}') from error
+
+
+def read_object(path,limit=MAX_JSON):
+    value=read_json(path,limit)
+    if not isinstance(value,dict):raise ValueError(f'{path}: expected JSON object')
+    return value
 
 
 def regular(path,executable=False):
