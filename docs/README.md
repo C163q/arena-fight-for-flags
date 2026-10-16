@@ -34,7 +34,7 @@
 
 已完成功能的设计稿保存在 `design/specs/`，当前使用方式和实际边界以指南、参考规范为准：
 
-- [参赛开发工具改进设计](design/specs/2026-10-16-contest-tools-design.md)：预检、小规模自测、固定条件版本比较、摘要与归档；待审阅、尚未实施。
+- [参赛开发工具改进设计](design/specs/2026-10-16-contest-tools-design.md)：预检、小规模自测、固定条件版本比较、摘要与归档；已批准、正在实施。
 - [千分制显示设计](design/specs/2026-10-16-score-presentation.md)
 - [多 AI、多地图测评设计](design/specs/2026-10-16-league-design.md)
 - [本机并发容量测量](design/specs/2026-10-15-jobs-capacity-design.md)
@@ -51,6 +51,7 @@
 
 计划记录任务拆分、验收要求和实施证据；进度以各文件为准：
 
+- [参赛开发工具](plans/2026-10-16-contest-tools.md)
 - [千分制显示](plans/2026-10-16-score-presentation.md)
 - [多 AI、多地图测评](plans/2026-10-16-league.md)
 - [本机并发容量测量](plans/2026-10-15-jobs-capacity.md)
