@@ -29,6 +29,8 @@ contest-kit/
 
 ## 固定文件范围
 
+多 AI、多地图 league 编排器当前仅供场外人员使用，不加入参赛压缩包；参赛者继续使用原固定名单自测器。打包白名单不随新增维护者脚本自动扩大。
+
 压缩包包含 `bin/` 下的 runner、worker、timer-query；`lib/` 下的基准 AI；C 头文件、七张 RON 地图、专门的参赛 README/docs、测评脚本及其所需模块、示例配置、回放导出器和离线播放器资源。路径与具体文件白名单在 `scripts/package_contest.py` 中显式列出，不递归复制工具目录。
 
 内层 `manifest.json` 记录格式/ABI 版本、源码提交与是否有工作区修改、工具链、平台、所需最低 glibc、文件 SHA-256 和权限。同样的文件与构建信息生成相同 tarball 字节；不保证不同工具链或环境下重编译产生相同 ELF。题包不捆绑 glibc/libgcc，需要在目标比赛环境验证兼容性。

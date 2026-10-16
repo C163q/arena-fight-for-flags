@@ -1,5 +1,7 @@
 # 系统架构 v1
 
+场外测评另提供 `scripts/league.py`：`league_schedule.py` 构造并验证精确候选/出生位赛程，`league_storage.py` 调用裁判地图检查并冻结 version=2 计划，`league_reporting.py` 按完整地图块及完整全图组统计。复用 `tournament_lib.execution` 的锁、原始回放验证和进程生命周期；旧 version=1 固定名单继续由 tournament.py 使用。CLI 不改游戏阶段或 ABI，详见 [多 AI、多地图测评](../guides/league.md)。
+
 首版已实现。不同队伍串行调用，补充默认方案已接受，见 [设计决策](decisions.md)。具体类型与函数以代码和公开头文件为准。
 
 ## 边界与三种可行路径

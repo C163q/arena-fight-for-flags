@@ -66,6 +66,8 @@ AI 可见全图、所有棋子位置/血量/携旗、当前旗帜、比分和复
 
 ## 自动测评
 
+从 AI 池自动组队、按地图容量补位并跨地图比较，使用新增的 [多 AI、多地图测评](docs/guides/league.md)：编辑 `config/league.example.json`，运行 `python3 scripts/league.py plan --config config/league.example.json --out runs/league-new`，检查场数后运行 `python3 scripts/league.py run runs/league-new`。精确均衡出场、出生位、两两同场及两两位置，总榜各地图等权；16 候选的 8 人图每完整重复组 240 场。
+
 为每种人数指定一组 AI，测评机自动安排位置均衡、多种子对抗，默认串行执行并验证每场回放，可指定跨场并发用于自测，支持中断续跑，输出 Markdown/CSV/JSON 报告。正式 8 人赛程每种子 56 场，均衡每个 AI 的出生位及任意两个 AI 的相对位置；快速模式每种子 8 场。
 
 ```sh
@@ -103,6 +105,7 @@ AI 设计/编码阶段可使用独立的总用时计时器。人类手动运行 
 | [回放](docs/reference/replay.md) | 实际文件格式和重放/导出约定 |
 | [基准 AI](docs/reference/benchmark-ai.md) | 策略、评测方法与限制 |
 | [自动测评机](docs/guides/tournament.md) | 固定名单、均衡赛程、续跑与统计 |
+| [多 AI、多地图测评](docs/guides/league.md) | 自动组合补位、精确均衡与等权总榜 |
 | [计时器](docs/guides/timer.md) | 人类终端大字计时与 LLM 只读查询 |
 
 架构与设计依据见 [设计决策](docs/design/decisions.md) 和 [路线图](docs/design/roadmap.md)；历史设计稿、实施计划、审查及实测报告在 [文档导航](docs/README.md) 中单独列出。

@@ -7,6 +7,7 @@
 | 文档 | 用途 |
 | --- | --- |
 | [自动测评机](guides/tournament.md) | 配置参赛名单、生成赛程、运行与续跑、查看排名 |
+| [多 AI、多地图测评](guides/league.md) | 候选自动组合、填充空位与跨地图总榜 |
 | [参赛题包](guides/contest-kit.md) | 一键生成、分发边界、专用文档与场外操作 |
 | [计时器](guides/timer.md) | 人类启动终端计时器，LLM 只读查询总用时 |
 
@@ -23,6 +24,8 @@
 | [基准 AI](reference/benchmark-ai.md) | 公开参考策略、评估方法和已知限制 |
 
 ## 架构与设计 `design/`
+
+- [多 AI、多地图测评设计](design/specs/2026-10-16-league-design.md)
 
 | 文档 | 用途 |
 | --- | --- |
@@ -46,6 +49,8 @@
 - [参赛题包](design/specs/2026-10-15-contest-kit-design.md)：外层组织者材料、内层参赛内容、LLM 时限与披露边界。
 
 ## 实施计划 `plans/`
+
+- [多 AI、多地图测评](plans/2026-10-16-league.md)
 
 计划记录任务拆分、验收要求和实施证据；进度以各文件为准：
 
