@@ -40,4 +40,6 @@
 
 ## 独立审查后的回归
 
-[独立审查](../reviews/contest-tools-2026-10-17.md) 的两项Important已回归修复：PAX隐藏数据/扩展链、验证到快照的突变窗口。归档专项15项、完整Python107项通过；真实自测6场重新通过，记录在 `runs/contest-tools-20261017/selftest-final/acceptance.json`。一项实验Markdown表格显示问题作为Minor保留，JSON不受影响。最终题包将使用修复后的干净提交重新生成；上节题包为修复前的验收记录。
+[独立审查](../reviews/contest-tools-2026-10-17.md) 的两项Important已回归修复：PAX隐藏数据/扩展链、验证到快照的突变窗口。归档专项15项、完整Python107项通过；真实自测6场重新通过，记录在 `runs/contest-tools-20261017/selftest-final/acceptance.json`。一项实验Markdown表格显示问题作为Minor保留，JSON不受影响。最终题包已使用修复后的干净提交重新生成；上节题包为修复前的历史验收记录。
+
+最终推荐题包：`dist/contest-kit-tools-final-20261017/`，干净构建提交 `ba58956`，归档SHA-256 `939abd1fbf5a7aef1ca42d2a46c30cfb52206b1f14b5b9f3de700516e3ada91d`。仓库外 `/tmp/fff-contest-tools-final-20261017/acceptance.json` 再次通过39文件、23命令、12场实际比赛；副本 `runs/contest-tools-20261017/package-final-acceptance.json`。未启动计时器。
