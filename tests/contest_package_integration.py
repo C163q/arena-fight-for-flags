@@ -107,12 +107,35 @@ def main():
     bundle = json.loads((root / 'runs/eight-teams/replay.json').read_text())
     assert bundle['bundle_format'] == 'fff-replay' and bundle['bundle_version'] == 1
     assert (root / 'runs/eight-teams/replay.html').stat().st_size > 1000
+    # New participant entry points run from the unpacked kit, without repository imports.
+    run('selftest-help', [sys.executable, 'scripts/selftest.py', '--help'])
+    run('selftest-check', [sys.executable, 'scripts/selftest.py', 'check', '--out', 'runs/preflight'])
+    assert json.loads((root/'runs/preflight/diagnostics.json').read_text())['passed']
+    short=root/'short.ron'
+    short.write_text(re.sub(r'max_turns:\s*\d+', 'max_turns: 2', (root/'maps/arena_2p.ron').read_text()))
+    run('selftest-run', [sys.executable, 'scripts/selftest.py', 'run', '--map', short, '--out', 'runs/selftest'])
+    assert json.loads((root/'runs/selftest/results.json').read_text())['completed_matches']==2
+    run('selftest-compare', [sys.executable, 'scripts/selftest.py', 'compare',
+        '--ai', 'c=submission/libc_team.so', '--ai', 'rust=submission/libteam.so',
+        '--map', short, '--out', 'runs/compare', '--max-matches', '1', '--jobs', '2'])
+    run('selftest-resume', [sys.executable, 'scripts/selftest.py', 'resume', 'runs/compare'])
+    comparison=json.loads((root/'runs/compare/results.json').read_text())
+    assert comparison['completed_matches']==4 and comparison['execution']['jobs_used']==[1,2]
+    run('selftest-summary', [sys.executable, 'scripts/selftest.py', 'summary', 'runs/compare', '--out', 'analysis'])
+    assert len(json.loads((root/'analysis/summary.json').read_text())['candidates'])==2
+    run('selftest-archive', [sys.executable, 'scripts/selftest.py', 'archive', 'runs/compare', '--out', 'backup.tar.gz'])
+    run('selftest-restore', [sys.executable, 'scripts/selftest.py', 'restore', 'backup.tar.gz', '--out', 'restored'])
+    for restored in (root/'restored').rglob('*'):
+        if restored.is_file():
+            original=root/'runs/compare'/restored.relative_to(root/'restored')
+            assert restored.read_bytes()==original.read_bytes()
     faults = []
-    for path in root.glob('runs/**/summary.json'):
+    for manifest_path in root.glob('runs/**/manifest.json'):
+        path=manifest_path.parent/'summary.json'
         summary = json.loads(path.read_text())
         assert not any(summary['ai_failures']) and not any(summary['illegal_actions']), (path, summary)
         faults.append({'match': str(path.parent.relative_to(root)), 'turns': summary['turns']})
-    assert len(faults) == 4
+    assert len(faults) == 12
     query = run('timer-query', ['bin/fff-timer-query'], codes=(0, 1))
     if query.returncode == 0:
         assert re.fullmatch(r'\d\d:\d\d:\d\d\n', query.stdout)

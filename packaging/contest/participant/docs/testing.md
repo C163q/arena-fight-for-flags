@@ -2,6 +2,46 @@
 
 以下命令均在解压后的 `fff-contest/` 运行。先将自己的 release 动态库保存为 `submission/libteam.so`。
 
+## 先预检，再做两场自测
+
+```sh
+python3 scripts/selftest.py check --out runs/preflight
+python3 scripts/selftest.py run --out runs/quick
+```
+
+默认从 `submission/libteam.so` 加载候选。预检先以基准检查环境，再以候选运行私有两回合真实 worker；查看 `diagnostics.json` 和 `report.md`。成功返回0、诊断失败返回1、输入错误返回2；权限问题交场外人员处理。预检不是强度成绩，也不保证其他局面不会超时。正常比赛的 AI 故障仍按规则计入。
+
+`run` 默认双人、基准对手、quick、一块、串行，**仅两场，交换出生位**。开始前打印总场数。可重复 `--map maps/arena_3p.ron` 等选择地图，用 `--opponent FILE` 更换固定对手、`--repeats N` 增加样本、`--mode balanced` 增加轮换；多人图其余位置都是固定对手的独立副本。默认总场数上限10000，可显式提高 `--match-limit`。
+
+## 比较自己的版本
+
+```sh
+python3 scripts/selftest.py compare \
+  --ai old=submission/libold.so --ai new=submission/libnew.so \
+  --opponent submission/libopponent.so --out runs/compare
+python3 scripts/selftest.py resume runs/compare --max-matches 2
+```
+
+两版分别面对固定对手，彼此不同场，默认共四场。对应比赛共享地图、种子、逻辑角色和出生位；不同策略会产生不同后续局面。`--seed-file runs/compare/seeds.json` 可在新实验复用条件，要求地图字节、ID、人数和重复数一致。
+
+创建时冻结所有库与地图，**改代码后新建实验**，续跑只使用旧快照。Ctrl+C 保留现场，`resume` 校验已完成回放后继续；`--max-matches N` 限制本次新增场数（跨版本合计）。不要移动活动实验或替换裁判/worker。输出 `report.md`、`results.json` 仅是开发自测；只有完整换位块有积分。保留不同风格的历史版本作为对手，避免只针对基准优化。
+
+`--jobs N` 默认1，可先尝试2；竞争资源可能增加超时并改变结果，串行续跑仍保留并行标记。**正式评测固定1**。新输出必须不存在。每版内层计划也可用下面旧测评器查看。
+
+## 指标、空间与备份
+
+```sh
+python3 scripts/selftest.py summary runs/compare --out runs/analysis
+python3 scripts/selftest.py archive runs/compare --out runs/compare.tar.gz
+python3 scripts/selftest.py restore runs/compare.tar.gz --out runs/restored
+```
+
+摘要先经裁判验证，按候选角色汇总各图拾旗、交旗、携旗阵亡、射击结果、友伤、实际扣血、移动结果和调用时间；坏记录会失败。名义射击伤害包含过量集火，实际扣血单列，不声称独占击杀。命中率以合法射击为分母，移动成功率以移动事件为分母。代表事件数量有界，可回原始记录定位；不完整块可以看行为，但不排名。
+
+支持单场完整回放或自测实验；单图可加 `--estimate-matches N` 估计扩展规模。实际字节和同图样本估算列在摘要中，无样本不估计，少于两场标记不足；不是空间上界。默认两场也应结合本机实际耗时、磁盘安排后续测试。
+
+归档只接受完整、无活动进程的记录，保留原始输入；恢复逐文件校验并逐场通过裁判后写入新目录，不覆盖已有文件。默认最多1000000文件、64GiB解压数据，使用 `--max-files`、`--max-bytes` 调整；拒绝链接、穿越、重复项、错误哈希和超量输入。仅离线备份，**不能迁移续跑**，不重写历史工具路径；工具不自动删除任何原始记录。恢复后可导出其中单场的回放。摘要输入最多25000帧、单JSON16MiB、单场JSON512MiB。
+
 ## 单场对战
 
 ```sh

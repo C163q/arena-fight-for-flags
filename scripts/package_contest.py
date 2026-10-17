@@ -18,6 +18,7 @@ import tempfile
 TARGET = 'x86_64-unknown-linux-gnu'
 BINARIES = ('fff-runner', 'fff-ai-worker', 'fff-timer-query')
 TOURNAMENT_FILES = ('__init__.py', 'execution.py', 'launch.py', 'reporting.py', 'schedule.py', 'storage.py', 'seeds.py')
+CONTEST_FILES = ('__init__.py', 'common.py', 'experiment.py', 'preflight.py', 'summary.py', 'archive.py')
 VIEWER_FILES = ('export.py', 'schema.py', 'index.html', 'player.css', 'player.js')
 DOC_FILES = ('README.md', 'docs/rules.md', 'docs/api.md', 'docs/testing.md', 'docs/replay.md')
 
@@ -116,9 +117,10 @@ def assemble(root: Path, artifacts: Path, output: Path, build_info: dict) -> Pat
             destination = (outer / name if name == 'fff-timer' else
                            inner / 'lib' / name if name.endswith('.so') else inner / 'bin' / name)
             copy_file(source, destination, executable=not name.endswith('.so'))
-        sources = [('include/ctf_ai.h', 'include/ctf_ai.h'), ('scripts/tournament.py', 'scripts/tournament.py')]
+        sources = [('include/ctf_ai.h', 'include/ctf_ai.h'), ('scripts/tournament.py', 'scripts/tournament.py'), ('scripts/selftest.py', 'scripts/selftest.py')]
         sources += [(f'maps/arena_{n}p.ron', f'maps/arena_{n}p.ron') for n in range(2, 9)]
         sources += [(f'scripts/tournament_lib/{name}', f'scripts/tournament_lib/{name}') for name in TOURNAMENT_FILES]
+        sources += [(f'scripts/contest_lib/{name}', f'scripts/contest_lib/{name}') for name in CONTEST_FILES]
         sources += [(f'viewer/{name}', f'viewer/{name}') for name in VIEWER_FILES]
         sources += [(f'packaging/contest/participant/{name}', name) for name in DOC_FILES]
         for source, destination in sources:

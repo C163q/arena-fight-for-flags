@@ -76,4 +76,6 @@ class SelftestTests(ToolFixture):
         result=subprocess.run(command,capture_output=True,text=True)
         self.assertEqual(result.returncode,0,result.stderr)
         self.assertIn('4',result.stdout)
+        self.assertIn('地图：',result.stdout)
+        self.assertIn('出生位',result.stdout)
         d=json.loads((self.base/'cli/results.json').read_text());self.assertEqual(d['completed_matches'],1)

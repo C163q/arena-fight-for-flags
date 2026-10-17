@@ -21,3 +21,7 @@ python3 viewer/export.py runs/my-match --format json
 图例：`#` 为墙、`.` 为地面、`0`–`7` 为出生区、`o` 为旗点、`*` 为地上旗、`A`–`X` 为棋子。棋子字符覆盖下层物体，完整明细仍保留。
 
 `verify` 重新执行已记录的实际动作并核对规则与 ASCII，不重新运行 AI。导出器只验证格式结构；不要以导出成功代替完整验证。未完成比赛可查看完整前缀。导出最多 25000 帧，单个源文件 16MiB、总输入 512MiB；超限会报错。
+
+## 行为摘要与备份
+
+`python3 scripts/selftest.py summary 比赛目录 --out runs/analysis` 先验证记录，再生成公开事件指标和磁盘估算，不运行 AI。`archive` 和 `restore` 用于完整记录的非破坏备份，恢复后对其中单场目录重新导出播放器。命令和限制见 [自主评测](testing.md)。

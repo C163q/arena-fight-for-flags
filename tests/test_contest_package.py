@@ -30,6 +30,8 @@ class ContestPackageTests(unittest.TestCase):
             shutil.copytree(ROOT / directory, self.root / directory)
         (self.root / 'scripts').mkdir()
         shutil.copy(ROOT / 'scripts/tournament.py', self.root / 'scripts/tournament.py')
+        shutil.copy(ROOT / 'scripts/selftest.py', self.root / 'scripts/selftest.py')
+        shutil.copytree(ROOT / 'scripts/contest_lib', self.root / 'scripts/contest_lib')
         shutil.copytree(ROOT / 'scripts/tournament_lib', self.root / 'scripts/tournament_lib')
         self.artifacts = self.parent / 'release'
         self.artifacts.mkdir()
@@ -47,6 +49,7 @@ class ContestPackageTests(unittest.TestCase):
         # A recursive copy would leak these extra files.
         (self.root / 'viewer/secret.rs').write_text('private strategy')
         (self.root / 'scripts/tournament_lib/secret.py').write_text('private')
+        (self.root / 'scripts/contest_lib/secret.py').write_text('private')
         self.assemble()
         self.assertEqual({p.name for p in self.out.iterdir()}, {'README.md', 'fff-timer', 'participant.tar.gz'})
         self.assertTrue((self.out / 'fff-timer').stat().st_mode & 0o111)
@@ -56,6 +59,9 @@ class ContestPackageTests(unittest.TestCase):
             self.assertIn('fff-contest/include/ctf_ai.h', files)
             self.assertIn('fff-contest/bin/fff-timer-query', files)
             self.assertIn('fff-contest/viewer/player.js', files)
+            self.assertIn('fff-contest/scripts/selftest.py', files)
+            for name in ('__init__', 'common', 'experiment', 'preflight', 'summary', 'archive'):
+                self.assertIn(f'fff-contest/scripts/contest_lib/{name}.py', files)
             self.assertFalse(any(p.endswith(('fff-timer', '.rs', '.rlib', 'secret.py', '.pyc')) for p in files))
             self.assertFalse(any('/__pycache__/' in p for p in files))
             manifest = json.load(archive.extractfile('fff-contest/manifest.json'))

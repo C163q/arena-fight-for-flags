@@ -6,6 +6,7 @@
 
 | 文档 | 用途 |
 | --- | --- |
+| [开发自测工具](guides/selftest.md) | 预检、默认两场、版本比较、公开指标与非破坏备份 |
 | [自动测评机](guides/tournament.md) | 配置参赛名单、生成赛程、运行与续跑、查看排名 |
 | [多 AI、多地图测评](guides/league.md) | 候选自动组合、填充空位与跨地图总榜 |
 | [参赛题包](guides/contest-kit.md) | 一键生成、分发边界、专用文档与场外操作 |
@@ -30,11 +31,11 @@
 | [系统架构](design/architecture.md) | 当前模块边界、进程管理与数据流 |
 | [设计决策](design/decisions.md) | 已接受的方案及用户确认来源 |
 | [交付状态与路线图](design/roadmap.md) | 交付情况和后续方向 |
-| [参赛题包改进准备](design/contest-kit-improvements.md) | 基于体验与对抗的候选改进、验收边界；尚未实施 |
+| [参赛题包改进准备](design/contest-kit-improvements.md) | 工具交付状态、验收边界及剩余地图工作 |
 
 已完成功能的设计稿保存在 `design/specs/`，当前使用方式和实际边界以指南、参考规范为准：
 
-- [参赛开发工具改进设计](design/specs/2026-10-16-contest-tools-design.md)：预检、小规模自测、固定条件版本比较、摘要与归档；已批准、正在实施。
+- [参赛开发工具改进设计](design/specs/2026-10-16-contest-tools-design.md)：预检、小规模自测、固定条件版本比较、摘要与归档；已实现，验收见实测报告。
 - [千分制显示设计](design/specs/2026-10-16-score-presentation.md)
 - [多 AI、多地图测评设计](design/specs/2026-10-16-league-design.md)
 - [本机并发容量测量](design/specs/2026-10-15-jobs-capacity-design.md)
@@ -87,6 +88,7 @@
 
 报告结论仅适用于记录中的地图、AI、配置和样本；原始对局数据保留在本地 `runs/`，不随文档迁移。
 
+- [参赛开发工具验收](reports/contest-tools-2026-10-17.md)：小规模自测、故障诊断、共同条件、进程清理、摘要与归档。
 - [地图竞技位置表现复核](reports/map-competition-2026-10-16.md)：既有三策略结果中的出生位差异，不修改地图。
 - [千分制显示验收](reports/score-presentation-2026-10-16.md)：兼容字段、原记录重建与新题包。
 - [三份参赛提交统一评测](reports/submissions-2026-10-16.md)：三份冻结提交、当前地图与串行均衡对抗。

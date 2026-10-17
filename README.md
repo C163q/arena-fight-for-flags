@@ -66,6 +66,8 @@ AI 可见全图、所有棋子位置/血量/携旗、当前旗帜、比分和复
 
 ## 自动测评
 
+开发时先用 [小规模自测工具](docs/guides/selftest.md)：`python3 scripts/selftest.py check --out runs/preflight` 检查真实 worker 环境/ABI，再用 `python3 scripts/selftest.py run --out runs/quick` 默认执行两场双人换位。候选默认 `submission/libteam.so`，可指定 `--ai`；`compare` 让各版本分别面对同一固定对手并复用种子/出生位，`resume` 续跑冻结快照，`summary` 汇总公开行为与磁盘估算，`archive`/`restore` 非破坏备份。正式选手同场比较继续使用 league。
+
 从 AI 池自动组队、按地图容量补位并跨地图比较，使用新增的 [多 AI、多地图测评](docs/guides/league.md)：编辑 `config/league.example.json`，运行 `python3 scripts/league.py plan --config config/league.example.json --out runs/league-new`，检查场数后运行 `python3 scripts/league.py run runs/league-new`。精确均衡出场、出生位、两两同场及两两位置，总榜各地图等权，积分按千分制显示、按未取整值排序；16 候选的 8 人图每完整重复组 240 场。
 
 为每种人数指定一组 AI，测评机自动安排位置均衡、多种子对抗，默认串行执行并验证每场回放，可指定跨场并发用于自测，支持中断续跑，输出 Markdown/CSV/JSON 报告。正式 8 人赛程每种子 56 场，均衡每个 AI 的出生位及任意两个 AI 的相对位置；快速模式每种子 8 场。
@@ -90,7 +92,7 @@ python3 scripts/package_contest.py
 
 输出 `dist/contest-kit/`，包含场外人员 README、`fff-timer` 和 `participant.tar.gz`；仅将压缩包分发给参赛者。压缩包使用 release 裁判/基准二进制，只提供 C 头文件与专用接口文档，并附自测与离线回放工具。LLM 时限 60 分钟，70 分钟由场外人员强制结束并收取已有编译结果。生成与维护约定见 [题包说明](docs/guides/contest-kit.md)。
 
-当前流程的实测见 [参赛体验](docs/reports/contest-kit-selftrial-2026-10-16.md) 与 [三份提交统一评测](docs/reports/submissions-2026-10-16.md)。后续候选改进及验收边界集中在 [准备清单](docs/design/contest-kit-improvements.md)，其中功能尚未实施。
+当前流程的实测见 [参赛体验](docs/reports/contest-kit-selftrial-2026-10-16.md) 与 [三份提交统一评测](docs/reports/submissions-2026-10-16.md)。工具改进与剩余地图工作见 [准备清单](docs/design/contest-kit-improvements.md)；预检、小规模自测、版本对照、摘要和归档已实现。
 
 ## 文档与检查
 
@@ -106,6 +108,7 @@ AI 设计/编码阶段可使用独立的总用时计时器。人类手动运行 
 | [API](docs/reference/api.md) | 已实现 C ABI v1 的字段与所有权 |
 | [回放](docs/reference/replay.md) | 实际文件格式和重放/导出约定 |
 | [基准 AI](docs/reference/benchmark-ai.md) | 策略、评测方法与限制 |
+| [开发自测](docs/guides/selftest.md) | 两场起步、版本比较、公开摘要和备份 |
 | [自动测评机](docs/guides/tournament.md) | 固定名单、均衡赛程、续跑与统计 |
 | [多 AI、多地图测评](docs/guides/league.md) | 自动组合补位、精确均衡与等权总榜 |
 | [计时器](docs/guides/timer.md) | 人类终端大字计时与 LLM 只读查询 |

@@ -77,3 +77,5 @@
 参赛题包见 [说明](docs/guides/contest-kit.md)。仅使用显式文件白名单和独立参赛文档模板，不将仓库源码或内部 docs 复制进 tarball；游戏程序与基准只发 release 二进制，接入材料只提供 C 头文件和完整接口文档。LLM 60/70 分钟要求同时出现在外层和内层 README，计时由场外人员控制。修改后验证 `tests/test_contest_package.py` 和仓库外 `tests/contest_package_integration.py`；产物放在忽略的 `dist/`，不提交二进制。
 
 多 AI、多地图评测见 [说明](docs/guides/league.md)：新配置/计划 version=2，旧固定名单 version=1 保持兼容。新增赛程须验证实际候选出场、出生位、两两同场与有序位置对精确均衡；总榜只采用完整全图重复组，各地图等权。填充队不入榜，候选统计只按实际出场。修改时运行 league Python 单测与 `tests/league_integration.py`；共用执行器/loader 变更同时验证原 tournament 验收和父进程清理。league 当前仅用于场外编排，不自动扩大参赛题包白名单。
+
+参赛开发工具见 [说明](docs/guides/selftest.md)：默认两场、版本分别对固定对手、共享显式条件但不保证相同后续世界；新输出原子发布，冻结输入续跑，并行来源保留。摘要先正式 verify，不能把过量伤害当实际扣血或死亡取消当非法；不输出 RNG/未来刷新信息。归档只接受完整记录，手动安全恢复并逐场 verify，不删除原始文件、不重写历史路径伪造可迁移续跑。修改时运行对应 `test_selftest.py`、`test_seed_spec.py`、`test_preflight.py`、`test_contest_summary.py`、`test_contest_archive.py`；实战验收用 `tests/selftest_integration.py`、`tests/preflight_integration.py`，锁/进程相关额外运行 `tests/selftest_parent_cleanup.py` 及旧 tournament 验收。均可显式提供当前 release `--bin-dir`；不得在维护任务中启动或控制人类计时器。

@@ -62,6 +62,7 @@ def main():
             suite=prepare_suite(versions,args.maps,args.opponent,args.runner,args.out,args.mode,args.repeats,
                                 read_json(args.seed_file) if args.seed_file else None,args.match_limit)
             print(f"开发自测：{suite['planned_matches']} 场，{suite['mode']}，重复 {suite['repeats']}，jobs={args.jobs}；正式评测固定1。",flush=True)
+            print('地图：'+', '.join(f"{m['id']} ({m['players']}队)" for m in suite['maps'])+'；'+('每版轮换全部出生位' if args.mode=='quick' else '每版均衡出生位及有序位置对')+'；版本分别面对固定对手。',flush=True)
             if args.jobs>1:print('并行自测可能增加超时并影响成绩；续跑保留并发来源。',file=sys.stderr,flush=True)
             result=resume_suite(args.out,args.jobs,args.max_matches)
         print(json.dumps({'completed':result['completed_matches'],'planned':result['planned_matches'],'execution':result['execution']},ensure_ascii=False))
