@@ -14,7 +14,7 @@
 | --- | --- |
 | Python全套 | 102项通过，含种子复用、原子发布、预检、实验、摘要和归档攻击输入 |
 | viewer | 8项通过 |
-| Rust | workspace test、fmt --check、clippy all-targets -D warnings通过 |
+| Rust | workspace 61项test、fmt --check、clippy all-targets -D warnings通过 |
 | 地图生成一致性 | 七张默认地图 --check通过，资产不修改 |
 | 真实预检 | wait/坏ABI/退出/无限循环，8场两回合；类别与退出码符合预期，见20261016/preflight/acceptance.json |
 | 真实新自测 | 默认原图2场＋两版本短图4场，共同条件、冻结后源库变更、串行续跑保留并发、无重复、摘要、归档恢复、损坏输入拒绝；见20261017/selftest/acceptance.json |
@@ -31,3 +31,9 @@
 共同种子不保证不同策略的后续世界相同；预检只验证给定两回合局面；空间估算依赖同图小样本，不是上界。归档完整性哈希不认证来源，恢复仅用于离线查看/审计，不迁移续跑；验证使用外部可信裁判。进程隔离不等于恶意代码安全沙箱。
 
 地图证据复核已完成，见 [位置表现](map-competition-2026-10-16.md)。具体布局调整仍需单独设计和标定，本轮没有修改。
+
+## 新题包
+
+输出 `dist/contest-kit-tools-20261017/`，从干净提交 `ef0a435` release构建，39个内层文件。归档SHA-256：`a154a0af090c88a355f253655b9bb28b258c9f21b6636bc7fa22a800dfcec6f6`。最低glibc 2.39；不打包源码实现、计时器控制程序、league或内部文档。
+
+仓库外验收 `/tmp/fff-contest-tools-20261017/acceptance.json` 通过：23个命令，12场真实比赛（其中8场两回合），独立C/Rust编译、全部文件哈希、10个内部链接、旧赛程及新工具全流程。只读查询器返回1，表示计时器不存在，未启动计时器。验收摘要副本保存在 `runs/contest-tools-20261017/package-acceptance.json`。
