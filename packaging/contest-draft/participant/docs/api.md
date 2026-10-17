@@ -65,12 +65,12 @@ Rust 按头文件自行声明等价类型：所有跨接口结构体（含嵌套
 | flag_respawn_min_turns, flag_respawn_max_turns | uint32_t | 本场旗帜生成等待参数的下限、上限 |
 | first_turn, restart_count | uint32_t | 本次启动后将处理的第一个比赛回合号、此前重启次数 |
 | seed | uint64_t | 己方独立 AI 种子，可以用于随机策略；不代表引擎随机状态 |
-| decision_budget_us | uint32_t | 常规回合的计算时间限制，单位为微秒（µs）。当前始终传入 50000（50ms），包括比赛开始和故障重启时；本字段不会传入 250000。第 1 回合的特殊限制见下文 |
+| decision_budget_us | uint32_t | 常规回合的计算时间限制，单位为微秒（µs）。第 1 回合的特殊限制见下文 |
 | initial_flag_count | uint32_t | 本场开局立即生成的旗帜数量 |
 | max_hp, shot_damage, shot_range | uint32_t | 满血、命中伤害、曼哈顿射程 |
 | respawn_absent_turns | uint32_t | 死亡后完整缺席的回合数，当前为 10 |
 
-`decision_budget_us` 只记录常规回合的限制，不会逐回合更新。判断当前回合能计算多久，应读取 `CtfObservation.turn`：等于 `1` 时，本队这次调用的时间限制为 250ms；大于 `1` 时为 50ms。
+`decision_budget_us` 当前始终传入 `50000`（50ms），只记录常规回合的限制，不会逐回合更新。判断当前回合能计算多久，应读取 `CtfObservation.turn`：等于 `1` 时，本队这次调用的时间限制为 250ms；大于 `1` 时为 50ms。
 
 ## 4. 每回合局面 CtfObservation
 

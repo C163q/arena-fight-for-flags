@@ -73,7 +73,7 @@
 
 记录文档审阅或独立代码审查的发现、处理、检查证据与范围：
 
-- [参赛文档第一轮审阅](reviews/contest-documents-2026-10-17.md)：独立副本中的措辞改写与正确性核对，等待用户逐篇审阅，未替换正式模板。
+- [参赛文档审阅与定稿](reviews/contest-documents-2026-10-17.md)：副本改写、用户反馈与正确性核对；定稿已同步正式模板。
 - [参赛开发工具审查](reviews/contest-tools-2026-10-17.md)
 - [千分制显示审查](reviews/score-presentation-2026-10-16.md)
 - [多 AI、多地图测评审查](reviews/league-review-2026-10-16.md)
