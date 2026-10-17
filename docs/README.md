@@ -9,7 +9,7 @@
 | [开发自测工具](guides/selftest.md) | 预检、默认两场、版本比较、公开指标与非破坏备份 |
 | [自动测评机](guides/tournament.md) | 配置参赛名单、生成赛程、运行与续跑、查看排名 |
 | [多 AI、多地图测评](guides/league.md) | 候选自动组合、填充空位与跨地图总榜 |
-| [参赛题包](guides/contest-kit.md) | 一键生成、分发边界、专用文档与场外操作 |
+| [参赛题包](guides/contest-kit.md) | 一键生成、分发边界、参赛文档组织与措辞、场外操作 |
 | [计时器](guides/timer.md) | 人类启动终端计时器，LLM 只读查询总用时 |
 
 比赛命令见 [项目 README](../README.md#构建和比赛)；观看与导出回放见 [回放说明](reference/replay.md)。
