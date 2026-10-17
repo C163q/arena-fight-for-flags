@@ -12,6 +12,7 @@ import platform
 import random
 import re
 import secrets
+import stat
 import shutil
 import tempfile
 from .schedule import permutations_for, coverage
@@ -56,7 +57,11 @@ def sha(path):
 
 @contextmanager
 def locked(root):
-    with (Path(root)/'.lock').open('a') as stream:
+    fd=os.open(Path(root)/'.lock',os.O_RDWR|os.O_CREAT|os.O_NOFOLLOW|os.O_NONBLOCK,0o600)
+    with os.fdopen(fd,'a') as stream:
+        info=os.fstat(stream.fileno())
+        if not stat.S_ISREG(info.st_mode) or info.st_nlink!=1:
+            raise ValueError(f'{root}: lock must be a single-link regular file')
         try:
             fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as error:

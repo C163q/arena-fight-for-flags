@@ -28,10 +28,19 @@ def main():
     p=sub.add_parser('summary',help='verify public replay events and summarize without running AI')
     p.add_argument('source',type=Path);p.add_argument('--out',type=Path,required=True)
     p.add_argument('--runner',type=Path);p.add_argument('--estimate-matches',type=int)
+    for name in ('archive','restore'):
+        p=sub.add_parser(name,help='non-destructive verified replay backup' if name=='archive' else 'restore verified records to a new directory')
+        p.add_argument('source',type=Path);p.add_argument('--out',type=Path,required=True);p.add_argument('--runner',type=Path)
+        p.add_argument('--max-files',type=int,default=1000000);p.add_argument('--max-bytes',type=int,default=64*1024**3)
     args=parser.parse_args()
     def interrupted(_signum,_frame):raise KeyboardInterrupt
     signal.signal(signal.SIGTERM,interrupted)
     try:
+        if args.command in ('archive','restore'):
+            from contest_lib.archive import archive_records,restore_archive
+            function=archive_records if args.command=='archive' else restore_archive
+            result=function(args.source,args.out,args.runner,args.max_files,args.max_bytes)
+            print(json.dumps(result,ensure_ascii=False));return 0
         if args.command=='summary':
             from contest_lib.summary import write_summary
             result=write_summary(args.source,args.out,args.runner,args.estimate_matches)
@@ -58,7 +67,10 @@ def main():
         print(json.dumps({'completed':result['completed_matches'],'planned':result['planned_matches'],'execution':result['execution']},ensure_ascii=False))
         return 0
     except KeyboardInterrupt:
-        print('自测已中断，现场保留；使用 selftest.py resume 原目录续跑。',file=sys.stderr);return 130
+        if args.command in ('run','compare','resume'):message='自测已中断，现场保留；使用 selftest.py resume 原目录续跑。'
+        elif args.command=='check':message='预检已中断，已有日志保留；重新检查请使用新输出目录。'
+        else:message='命令已中断，原始输入保留；可重新执行命令。'
+        print(message,file=sys.stderr);return 130
     except (ValueError,OSError,KeyError,TypeError) as error:
         print(f'自测失败：{error}',file=sys.stderr);return 2
 
