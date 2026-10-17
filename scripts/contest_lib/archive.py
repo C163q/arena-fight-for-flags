@@ -30,11 +30,26 @@ class _LimitedInfo(tarfile.TarInfo):
     separately enforce manifest quotas. Sparse formats are outside this format.
     """
     def _proc_pax(self,tar):
-        if self.size>65536:raise ValueError('archive extension metadata limit')
-        return super()._proc_pax(tar)
-    def _proc_gnulong(self,tar):
-        if self.size>65536:raise ValueError('archive extension metadata limit')
-        return super()._proc_gnulong(tar)
+        # Our writer uses PAX only to represent a long path. Global/size
+        # overrides can hide raw data beyond the declared payload quota.
+        if self.type!=tarfile.XHDTYPE or getattr(tar,'_fff_path_extension',False):
+            raise ValueError('global or chained archive extensions are not supported')
+        if not 0<self.size<=65536:raise ValueError('archive extension metadata limit')
+        raw=tar.fileobj.read(self._block(self.size))
+        if len(raw)!=self._block(self.size):raise ValueError('truncated archive extension')
+        record=raw[:self.size]
+        match=re.match(rb'([1-9][0-9]{0,5}) path=',record)
+        if match is None or int(match.group(1))!=len(record) or not record.endswith(b'\n'):
+            raise ValueError('only one PAX path field is supported')
+        try:path=relative(record[match.end():-1].decode('utf-8'))
+        except UnicodeError as error:raise ValueError('invalid PAX path encoding') from error
+        tar._fff_path_extension=True
+        try:following=self._fromtarfile(tar)
+        finally:tar._fff_path_extension=False
+        following.name=path;following.offset=self.offset
+        following.pax_headers={'path':path}
+        return following
+    def _proc_gnulong(self,tar):raise ValueError('GNU long extensions are not supported')
     def _proc_sparse(self,*args,**kwargs):raise ValueError('sparse archives are not supported')
     def _proc_gnusparse_00(self,*args,**kwargs):raise ValueError('sparse archives are not supported')
     def _proc_gnusparse_01(self,*args,**kwargs):raise ValueError('sparse archives are not supported')
@@ -99,26 +114,30 @@ def _selection(root,runner,logs):
             tree_bytes(root)  # Reject all links/special files, including excluded extras.
             selected={root/'suite.json',root/'suite.sha256',root/'seeds.json'}
             selected.update(snapshot_path(root,item['path']) for item in suite['frozen_inputs'])
-            matches=[]
+            matches=[];verified={}
             for version in suite['versions']:
                 plan_root=snapshot_path(root,version['plan']);plan=load_plan(plan_root)
+                before={}
                 for manifest in plan_root.glob('matches/*/attempt-*/match/manifest.json'):
                     value=read_object(manifest)
-                    if value.get('status')=='complete':record_inventory(manifest.parent)
+                    if value.get('status')=='complete':
+                        before[manifest.parent]=record_inventory(manifest.parent)['fingerprint']
                 rows=collect(plan_root,plan,fds[version['id']])
                 if len(rows)!=len(plan['matches']):raise ValueError('cannot archive incomplete experiment')
                 selected.update([root/f'config-{version["id"]}.json',plan_root/'plan.json',plan_root/'plan.sha256'])
                 selected.update(snapshot_path(plan_root,item['path']) for item in plan['ais']+plan['groups'])
                 for row in rows:
                     match=plan_root/row['directory'];inventory=record_inventory(match)
-                    matches.append(str(match.relative_to(root)));selected.update(inventory['files'])
+                    if before.get(match)!=inventory['fingerprint']:raise ValueError('records changed during verification')
+                    rel=str(match.relative_to(root));verified[rel]=inventory['fingerprint']
+                    matches.append(rel);selected.update(inventory['files'])
                     selected.add(match.parent/'attempt.json')
                     for name in ['runner.stdout.log','runner.stderr.log']:
                         if (match.parent/name).exists():selected.add(match.parent/name)
-            yield 'selftest',sorted(matches),sorted(selected)
+            yield 'selftest',sorted(matches),sorted(selected),verified
     else:
         inventory=verify_match(root,runner,logs)
-        yield 'match',['.'],sorted(inventory['files'])
+        yield 'match',['.'],sorted(inventory['files']),{'.':inventory['fingerprint']}
 
 
 class _HashReader:
@@ -137,7 +156,7 @@ def archive_records(source,out,runner=None,max_files=MAX_FILES,max_bytes=MAX_BYT
     try:
         with tempfile.TemporaryDirectory(prefix='.'+out.name+'-',dir=out.parent) as tmp:
             temp=Path(tmp)
-            with _selection(root,runner,temp/'verify-logs') as (kind,matches,files):
+            with _selection(root,runner,temp/'verify-logs') as (kind,matches,files,verified):
                 if len(files)>max_files:raise ValueError('archive file limit')
                 entries=[];snapshots={};total=0
                 for path in files:
@@ -164,6 +183,14 @@ def archive_records(source,out,runner=None,max_files=MAX_FILES,max_bytes=MAX_BYT
                     path=root/entry['path']
                     if _key(file_stat(path))!=snapshots[entry['path']] or _hash_source(path,snapshots[entry['path']])!=entry['sha256']:
                         raise ValueError('source changed during archive')
+                # Keep the pre-verification inventory tied to the bytes we publish,
+                # including the interval before archive hashing began.
+                for match,fingerprint in verified.items():
+                    if record_inventory(root/match)['fingerprint']!=fingerprint:
+                        raise ValueError('records changed since verification')
+                if kind=='selftest':
+                    from .experiment import load_suite
+                    load_suite(root)
                 publish_path(saved,out)
         return {'archive':str(out),'sha256':sha(out),'files':len(entries),'matches':len(matches),'uncompressed_bytes':total,'source_preserved':True}
     except tarfile.TarError as error:raise ValueError(f'invalid archive: {error}') from error

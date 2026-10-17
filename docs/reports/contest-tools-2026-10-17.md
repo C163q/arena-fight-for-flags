@@ -12,7 +12,7 @@
 
 | 检查 | 结果 |
 | --- | --- |
-| Python全套 | 102项通过，含种子复用、原子发布、预检、实验、摘要和归档攻击输入 |
+| Python全套 | 107项通过（审查修复后），含种子复用、原子发布、预检、实验、摘要和归档攻击输入 |
 | viewer | 8项通过 |
 | Rust | workspace 61项test、fmt --check、clippy all-targets -D warnings通过 |
 | 地图生成一致性 | 七张默认地图 --check通过，资产不修改 |
@@ -37,3 +37,7 @@
 输出 `dist/contest-kit-tools-20261017/`，从干净提交 `ef0a435` release构建，39个内层文件。归档SHA-256：`a154a0af090c88a355f253655b9bb28b258c9f21b6636bc7fa22a800dfcec6f6`。最低glibc 2.39；不打包源码实现、计时器控制程序、league或内部文档。
 
 仓库外验收 `/tmp/fff-contest-tools-20261017/acceptance.json` 通过：23个命令，12场真实比赛（其中8场两回合），独立C/Rust编译、全部文件哈希、10个内部链接、旧赛程及新工具全流程。只读查询器返回1，表示计时器不存在，未启动计时器。验收摘要副本保存在 `runs/contest-tools-20261017/package-acceptance.json`。
+
+## 独立审查后的回归
+
+[独立审查](../reviews/contest-tools-2026-10-17.md) 的两项Important已回归修复：PAX隐藏数据/扩展链、验证到快照的突变窗口。归档专项15项、完整Python107项通过；真实自测6场重新通过，记录在 `runs/contest-tools-20261017/selftest-final/acceptance.json`。一项实验Markdown表格显示问题作为Minor保留，JSON不受影响。最终题包将使用修复后的干净提交重新生成；上节题包为修复前的验收记录。

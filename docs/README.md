@@ -73,6 +73,7 @@
 
 记录独立审查发现、修复、回归证据与审查范围：
 
+- [参赛开发工具审查](reviews/contest-tools-2026-10-17.md)
 - [千分制显示审查](reviews/score-presentation-2026-10-16.md)
 - [多 AI、多地图测评审查](reviews/league-review-2026-10-16.md)
 - [本机并发容量审查](reviews/jobs-capacity-review-2026-10-15.md)
