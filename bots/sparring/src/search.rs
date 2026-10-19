@@ -119,6 +119,14 @@ impl Bot {
     ) -> [usize; 24] {
         let b = self.board.as_ref().unwrap();
         let mut next = s.pos;
+        // A rollout has at most 32 live flags. Scan the board once per
+        // predicted world, rather than once for every moving opponent.
+        let ground_positions: Vec<_> = s
+            .ground
+            .iter()
+            .enumerate()
+            .filter_map(|(p, &count)| (count > 0).then_some(p))
+            .collect();
         for (v, destination) in next.iter_mut().enumerate().take(s.count) {
             let p = s.pos[v];
             if p == NONE {
@@ -134,12 +142,10 @@ impl Bot {
                 let i = mine.iter().position(|&e| e == v).unwrap();
                 goals[assigned[i]].pos
             } else {
-                s.ground
+                ground_positions
                     .iter()
-                    .enumerate()
-                    .filter(|(_, count)| **count > 0)
-                    .min_by_key(|(q, _)| b.distance(p, *q) as u32 + self.home[team][*q] as u32 / 3)
-                    .map(|(q, _)| q)
+                    .copied()
+                    .min_by_key(|&q| b.distance(p, q) as u32 + self.home[team][q] as u32 / 3)
                     .or_else(|| {
                         goals
                             .iter()
@@ -293,21 +299,7 @@ impl Bot {
             }
             let p = s.pos[u];
             let carrying = s.carry[u];
-            let mut risk = vec![0.; b.n];
-            for (q, r) in risk.iter_mut().enumerate() {
-                if b.walls[q] != 0 {
-                    continue;
-                }
-                for &e in &enemies {
-                    if !s.carry[e] {
-                        if b.sight(s.pos[e], q) {
-                            *r += if carrying { 1.5 } else { 0.10 };
-                        } else if b.sight(epred[e], q) {
-                            *r += if carrying { 1.1 } else { 0.08 };
-                        }
-                    }
-                }
-            }
+            let risk = fire_risk(b, s, &enemies, &epred, carrying);
             let destinations: Vec<_> = if carrying {
                 self.home[self.team]
                     .iter()
@@ -583,5 +575,84 @@ mod tests {
         }];
         let predicted = bot.predicted_moves(&s, &shots, &stale, &[0, 1, 2], &[0; 3]);
         assert_eq!(predicted[3], 41);
+    }
+}
+
+fn fire_risk(
+    b: &Board,
+    s: &State,
+    enemies: &[usize],
+    predicted: &[usize; 24],
+    carrying: bool,
+) -> Vec<f32> {
+    let mut risk = vec![0.; b.n];
+    // Preserve the original enemy accumulation order for every destination.
+    // Only radius-five cones can contribute; the rest of the board stays zero.
+    for &e in enemies {
+        if s.carry[e] {
+            continue;
+        }
+        let current = s.pos[e];
+        for (source, future) in [(current, false), (predicted[e], true)] {
+            if source >= b.n || future && source == current {
+                continue;
+            }
+            let x = (source % b.w) as i32;
+            let y = (source / b.w) as i32;
+            let weight = match (carrying, future) {
+                (true, false) => 1.5,
+                (true, true) => 1.1,
+                (false, false) => 0.10,
+                (false, true) => 0.08,
+            };
+            for dy in -5i32..=5 {
+                for dx in -5i32..=5 {
+                    if dx.abs() + dy.abs() > 5 {
+                        continue;
+                    }
+                    let Some(p) = b.cell(x + dx, y + dy) else {
+                        continue;
+                    };
+                    if b.sight(source, p) && (!future || !b.sight(current, p)) {
+                        risk[p] += weight;
+                    }
+                }
+            }
+        }
+    }
+    risk
+}
+#[cfg(test)]
+mod risk_tests {
+    use super::*;
+    #[test]
+    fn fire_risk_counts_current_and_predicted_cones_once() {
+        let mut walls = vec![0; 225];
+        walls[2 * 15 + 2] = 1;
+        let b = Board::new(15, 15, &walls);
+        let mut s = State {
+            pos: [NONE; 24],
+            hp: [0; 24],
+            carry: [false; 24],
+            team: [0; 24],
+            count: 6,
+            ground: vec![0; 225],
+        };
+        s.pos[3] = 19;
+        s.pos[4] = 61;
+        s.pos[5] = 48;
+        s.carry[5] = true;
+        let mut predicted = s.pos;
+        predicted[3] = 20;
+        predicted[4] = 76;
+        let carrier = fire_risk(&b, &s, &[3, 4, 5], &predicted, true);
+        assert_eq!(carrier[16], 3.0);
+        assert_eq!(carrier[24], 1.5);
+        assert_eq!(carrier[25], 1.1);
+        assert_eq!(carrier[19], 1.1);
+        assert_eq!(carrier[32], 0.0);
+        let collector = fire_risk(&b, &s, &[3, 4, 5], &predicted, false);
+        assert_eq!(collector[16], 0.2);
+        assert_eq!(collector[25], 0.08);
     }
 }
