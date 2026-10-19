@@ -1,0 +1,11 @@
+[package]
+name = "fff-bot-sparring"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+fff-ai-abi = { path = "../../crates/ai-abi" }

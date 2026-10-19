@@ -98,6 +98,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "fff-bot-sparring"
+version = "0.1.0"
+dependencies = [
+ "fff-ai-abi",
+]
+
+[[package]]
 name = "fff-bot-test-fixture"
 version = "0.1.0"
 dependencies = [
