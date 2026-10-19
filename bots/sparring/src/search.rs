@@ -182,7 +182,7 @@ impl Bot {
     ) -> f32 {
         let b = self.board.as_ref().unwrap();
         let mut value = 0.;
-        let depth = if self.home.len() <= 4 { 3 } else { 2 };
+        let depth = if self.home.len() <= 5 { 3 } else { 1 };
         for step in 0..depth {
             let discount = [0.48, 0.26, 0.13][step];
             let shots: Vec<_> = (0..self.home.len())
@@ -195,15 +195,15 @@ impl Bot {
                     *hit += shot.hits[e];
                 }
             }
-            value += discount * shots[self.team].value;
+            value += discount * 0.85 * shots[self.team].value;
             for &v in mine {
                 if v == NONE || s.pos[v] == NONE {
                     continue;
                 }
                 let hits = damage[v].min(s.hp[v]) as f32;
-                value -= discount * hits * if s.carry[v] { 4.8 } else { 2.0 };
+                value -= discount * hits * if s.carry[v] { 6.5 } else { 3.2 };
                 if damage[v] >= s.hp[v] {
-                    value -= discount * if s.carry[v] { 25. } else { 11. };
+                    value -= discount * if s.carry[v] { 38. } else { 12.5 };
                 }
             }
             let old = s.pos;
@@ -300,9 +300,9 @@ impl Bot {
                 }
                 for &e in &enemies {
                     if !s.carry[e] {
-                        if b.sight(q, s.pos[e]) {
+                        if b.sight(s.pos[e], q) {
                             *r += if carrying { 1.5 } else { 0.10 };
-                        } else if b.sight(q, epred[e]) {
+                        } else if b.sight(epred[e], q) {
                             *r += if carrying { 1.1 } else { 0.08 };
                         }
                     }
@@ -402,6 +402,7 @@ impl Bot {
                         }
                         if let Some(e) = enemies.iter().find(|&&e| s.pos[e] == p)
                             && damage[*e] + third[*e] < s.hp[*e]
+                            && epred[*e] == s.pos[*e]
                         {
                             valid = false;
                         }

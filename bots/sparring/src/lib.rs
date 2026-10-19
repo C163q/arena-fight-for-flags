@@ -124,6 +124,7 @@ pub unsafe extern "C" fn ctf_create(init: *const CtfInit, output: *mut *mut c_vo
         ))
     })) {
         Ok(context) => {
+            // SAFETY: checked writable output; ownership transfers to the worker.
             unsafe {
                 *output = Box::into_raw(context).cast();
             }
@@ -153,6 +154,7 @@ pub unsafe extern "C" fn ctf_decide(
         unsafe { &mut *context.cast::<Bot>() }.decide(&view)
     })) {
         Ok(actions) => {
+            // SAFETY: checked writable output owned by the caller for this call.
             unsafe {
                 *output = actions;
             }

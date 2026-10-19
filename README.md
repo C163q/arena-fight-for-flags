@@ -2,7 +2,7 @@
 
 Rust 回合制夺旗 AI 竞技场。每队三个棋子，AI 通过 C ABI 一次提交全队动作，每队第 1 回合有 250ms、之后每回合 50ms 墙钟预算。各队串行决策、共享同一回合开始快照，裁判随后统一射击、移动、拾旗/生成和得分。
 
-首版已提供 Linux 64 位裁判、独立 AI worker、三种参考 AI、2–8 队 RON 地图、逐轮 JSON/ASCII 记录、规则重放验证器和可离线打开的 HTML 播放器。
+已提供 Linux 64 位裁判、独立 AI worker、等待/贪心/基准与强化陪练 AI、2–8 队 RON 地图、逐轮 JSON/ASCII 记录、规则重放验证器和可离线打开的 HTML 播放器。
 
 ## 构建和比赛
 
@@ -41,6 +41,8 @@ Rust AI 使用 `cdylib`，依赖 `fff-ai-abi`，可以用 `export_ai!(strategy)`
 ```sh
 cargo build --release -p fff-bot-baseline
 ```
+
+希望使用更强的自测对手时，可构建 `fff-bot-sparring`，将 `target/release/libfff_bot_sparring.so` 传给 `selftest.py run --opponent`。用法、策略和实测边界见 [陪练 AI](docs/reference/sparring-ai.md)。
 
 AI 可见全图、所有棋子位置/血量/携旗、当前旗帜、比分和复活信息；看不到其他队伍本轮动作、未来具体刷新时刻和引擎 RNG。第 1 回合 250ms、后续 50ms，均包含恢复、IPC 和完整响应校验，排队不计时，初始化另有限额。超时终止该进程组，本轮整队等待，下一轮重启并丢失 context；重启不重新获得首回合额度。
 

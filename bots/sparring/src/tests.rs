@@ -215,3 +215,16 @@ fn equal_priority_enemies_remain_stable_when_input_is_reordered() {
     o.units.reverse();
     assert_eq!(first, choose(&o));
 }
+
+#[test]
+fn carrier_can_follow_a_predicted_enemy_chain_to_empty_space() {
+    let mut o = fixture();
+    o.homes[0].x = 10;
+    o.homes[0].y = 6;
+    o.homes[1].x = 10;
+    o.homes[1].y = 10;
+    put(&mut o, 0, 6, 7, 3, true);
+    put(&mut o, 3, 7, 7, 3, true);
+    let a = choose(&o);
+    assert_eq!((a.actions[0].kind, a.actions[0].direction), (MOVE, RIGHT));
+}

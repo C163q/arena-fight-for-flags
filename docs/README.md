@@ -23,6 +23,7 @@
 | [地图格式](reference/maps.md) | RON schema、默认七图与加载校验 |
 | [回放格式与播放](reference/replay.md) | 记录文件、验证、导出和离线播放器 |
 | [基准 AI](reference/benchmark-ai.md) | 公开参考策略、评估方法和已知限制 |
+| [陪练 AI](reference/sparring-ai.md) | 强化对手的构建、使用和策略边界 |
 
 ## 架构与设计 `design/`
 
@@ -35,6 +36,7 @@
 
 已完成功能的设计稿保存在 `design/specs/`，当前使用方式和实际边界以指南、参考规范为准：
 
+- [陪练 AI 设计](design/specs/2026-10-19-sparring-bot.md)
 - [参赛开发工具改进设计](design/specs/2026-10-16-contest-tools-design.md)：预检、小规模自测、固定条件版本比较、摘要与归档；已实现，验收见实测报告。
 - [千分制显示设计](design/specs/2026-10-16-score-presentation.md)
 - [多 AI、多地图测评设计](design/specs/2026-10-16-league-design.md)
@@ -52,6 +54,7 @@
 
 计划记录任务拆分、验收要求和实施证据；进度以各文件为准：
 
+- [陪练 AI](plans/2026-10-19-sparring-bot.md)
 - [参赛开发工具](plans/2026-10-16-contest-tools.md)
 - [千分制显示](plans/2026-10-16-score-presentation.md)
 - [多 AI、多地图测评](plans/2026-10-16-league.md)
@@ -73,6 +76,7 @@
 
 记录文档审阅或独立代码审查的发现、处理、检查证据与范围：
 
+- [陪练 AI 审查](reviews/sparring-ai-2026-10-19.md)
 - [参赛文档审阅与定稿](reviews/contest-documents-2026-10-17.md)：副本改写、用户反馈与正确性核对；定稿已同步正式模板。
 - [参赛开发工具审查](reviews/contest-tools-2026-10-17.md)
 - [千分制显示审查](reviews/score-presentation-2026-10-16.md)
@@ -90,6 +94,7 @@
 
 报告结论仅适用于记录中的地图、AI、配置和样本；原始对局数据保留在本地 `runs/`，不随文档迁移。
 
+- [陪练 AI 开发与实测](reports/sparring-ai-2026-10-19.md)
 - [参赛开发工具验收](reports/contest-tools-2026-10-17.md)：小规模自测、故障诊断、共同条件、进程清理、摘要与归档。
 - [地图竞技位置表现复核](reports/map-competition-2026-10-16.md)：既有三策略结果中的出生位差异，不修改地图。
 - [千分制显示验收](reports/score-presentation-2026-10-16.md)：兼容字段、原记录重建与新题包。

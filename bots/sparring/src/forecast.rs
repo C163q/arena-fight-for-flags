@@ -169,3 +169,112 @@ mod tests {
         assert_eq!(s.pos[1], 31);
     }
 }
+
+#[cfg(test)]
+mod differential_tests {
+    use super::*;
+    use fff_engine::{
+        Action, Config, Direction, Engine, MapDefinition, Point,
+        map::{FlagPoint, MatchLimits, SpawnRegion},
+    };
+    #[test]
+    fn crowded_movement_matches_engine_for_independent_action_sets() {
+        let map = MapDefinition {
+            format_version: 1,
+            id: "forecast_test".into(),
+            players: 2,
+            width: 15,
+            height: 15,
+            match_limits: MatchLimits {
+                target_score: 20,
+                max_turns: 10,
+            },
+            terrain: (0..15)
+                .map(|y| {
+                    if y == 0 || y == 14 {
+                        "#".repeat(15)
+                    } else {
+                        format!("#{}#", ".".repeat(13))
+                    }
+                })
+                .collect(),
+            spawn_regions: vec![
+                SpawnRegion {
+                    team_id: 0,
+                    x: 1,
+                    y: 1,
+                    width: 3,
+                    height: 3,
+                },
+                SpawnRegion {
+                    team_id: 1,
+                    x: 11,
+                    y: 11,
+                    width: 3,
+                    height: 3,
+                },
+            ],
+            flag_points: vec![FlagPoint { id: 0, x: 7, y: 7 }],
+        };
+        let initial = Engine::new(map.clone(), Config::default(), 1)
+            .unwrap()
+            .snapshot()
+            .clone();
+        let mut seed = 881u64;
+        let mut draw = || {
+            seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1);
+            (seed >> 32) as usize
+        };
+        for case in 0..400 {
+            let mut start = initial.clone();
+            let mut forecast = State {
+                pos: [NONE; 24],
+                hp: [0; 24],
+                carry: [false; 24],
+                team: [0; 24],
+                count: 6,
+                ground: vec![0; 225],
+            };
+            for i in 0..6 {
+                let p = loop {
+                    let p = (5 + draw() % 4) * 15 + 5 + draw() % 4;
+                    if !forecast.pos.contains(&p) {
+                        break p;
+                    }
+                };
+                forecast.pos[i] = p;
+                forecast.hp[i] = 3;
+                forecast.team[i] = (i / 3) as u32;
+                start.units[i].position = Some(Point::new((p % 15) as i32, (p / 15) as i32));
+            }
+            let mut desired = forecast.pos;
+            let mut actions = vec![[Action::Wait; 3]; 2];
+            for i in 0..6 {
+                let p = forecast.pos[i];
+                let choice = draw() % 5;
+                if choice < 4 {
+                    let (delta, direction) = match choice {
+                        0 => (-15, Direction::Up),
+                        1 => (15, Direction::Down),
+                        2 => (-1, Direction::Left),
+                        _ => (1, Direction::Right),
+                    };
+                    desired[i] = (p as isize + delta) as usize;
+                    actions[i / 3][i % 3] = Action::Move { direction };
+                }
+            }
+            let mut engine = Engine::from_snapshot(map.clone(), Config::default(), start).unwrap();
+            engine.begin_turn().unwrap();
+            let frame = engine.resolve_turn(actions).unwrap();
+            forecast.movement(&desired);
+            for i in 0..6 {
+                let p = frame.end.units[i].position.unwrap();
+                assert_eq!(
+                    forecast.pos[i],
+                    p.y as usize * 15 + p.x as usize,
+                    "case {case} unit {i}"
+                );
+            }
+        }
+    }
+}

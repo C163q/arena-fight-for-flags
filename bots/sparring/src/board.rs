@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::{cell::Cell, collections::VecDeque};
 
 pub const NONE: usize = usize::MAX;
 pub const FAR: u16 = 30000;
@@ -9,7 +9,7 @@ pub struct Board {
     pub n: usize,
     pub walls: Vec<u8>,
     pub adj: Vec<[usize; 4]>,
-    sight: Vec<u128>,
+    sight: Vec<Cell<u128>>,
     rows: Vec<Option<Vec<u16>>>,
     order: VecDeque<usize>,
 }
@@ -21,7 +21,7 @@ impl Board {
             n,
             walls: walls.to_vec(),
             adj: vec![[NONE; 4]; n],
-            sight: vec![0; n],
+            sight: vec![Cell::new(0); n],
             rows: vec![None; n],
             order: VecDeque::new(),
         };
@@ -34,18 +34,6 @@ impl Board {
             for (d, (dx, dy)) in [(0, -1), (0, 1), (-1, 0), (1, 0)].into_iter().enumerate() {
                 if let Some(p) = b.cell(x + dx, y + dy) {
                     b.adj[a][d] = p;
-                }
-            }
-            for dy in -5i32..=5 {
-                for dx in -5i32..=5 {
-                    if dx.abs() + dy.abs() > 5 || dx == 0 && dy == 0 {
-                        continue;
-                    }
-                    if let Some(p) = b.cell(x + dx, y + dy)
-                        && b.trace(a, p)
-                    {
-                        b.sight[a] |= 1u128 << ((dy + 5) * 11 + dx + 5);
-                    }
                 }
             }
         }
@@ -99,7 +87,30 @@ impl Board {
         }
         let dx = (b % self.w) as i32 - (a % self.w) as i32;
         let dy = (b / self.w) as i32 - (a / self.w) as i32;
-        dx.abs() + dy.abs() <= 5 && self.sight[a] & (1u128 << ((dy + 5) * 11 + dx + 5)) != 0
+        if dx.abs() + dy.abs() > 5 || self.walls[a] != 0 || self.walls[b] != 0 {
+            return false;
+        }
+        let mut mask = self.sight[a].get();
+        if mask == 0 {
+            // Bit127 cannot be a radius-five offset; marks even an empty row ready.
+            mask = 1u128 << 127;
+            let x = (a % self.w) as i32;
+            let y = (a / self.w) as i32;
+            for oy in -5i32..=5 {
+                for ox in -5i32..=5 {
+                    if ox.abs() + oy.abs() > 5 || ox == 0 && oy == 0 {
+                        continue;
+                    }
+                    if let Some(p) = self.cell(x + ox, y + oy)
+                        && self.trace(a, p)
+                    {
+                        mask |= 1u128 << ((oy + 5) * 11 + ox + 5);
+                    }
+                }
+            }
+            self.sight[a].set(mask);
+        }
+        mask & (1u128 << ((dy + 5) * 11 + dx + 5)) != 0
     }
     pub fn bfs(&self, goals: &[usize]) -> Vec<u16> {
         let mut row = vec![FAR; self.n];
@@ -207,6 +218,17 @@ mod differential_tests {
                 }
             }
         }
+    }
+    #[test]
+    fn cold_sight_cache_only_traces_requested_sources() {
+        let b = Board::new(128, 128, &vec![0; 128 * 128]);
+        for source in 200..224 {
+            for target in 0..b.n {
+                let _ = b.sight(source, target);
+            }
+        }
+        let prepared = b.sight.iter().filter(|mask| mask.get() != 0).count();
+        assert_eq!(prepared, 24);
     }
     #[test]
     fn maximum_map_cache_stays_bounded_after_many_goals() {
