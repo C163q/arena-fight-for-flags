@@ -9,3 +9,6 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 fff-ai-abi = { path = "../../crates/ai-abi" }
+
+[dev-dependencies]
+fff-engine = { path = "../../crates/engine" }

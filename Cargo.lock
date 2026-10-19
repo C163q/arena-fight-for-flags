@@ -102,6 +102,7 @@ name = "fff-bot-sparring"
 version = "0.1.0"
 dependencies = [
  "fff-ai-abi",
+ "fff-engine",
 ]
 
 [[package]]
